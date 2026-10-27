@@ -8,7 +8,7 @@ Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JS
 
 | 技能 | 作用 | 入口 |
 |---|---|---|
-| `dify-workflow-dsl` | 自然语言 → 可导入 DSL；方案选型、导入排查也一并覆盖（不依赖外部技能）。含 21 个节点规范、4 个模板、5 个完整样例、静态校验器 | [`skills/dify-workflow-dsl/`](skills/dify-workflow-dsl/SKILL.md) |
+| `dify-workflow-dsl` | 自然语言 → 可导入 DSL；含方案选型、导入排查、21 个节点规范、4 个模板、5 个完整样例、静态校验器 | [`skills/dify-workflow-dsl/`](skills/dify-workflow-dsl/SKILL.md) |
 
 技能内部细节（校验器覆盖范围、已知边界、目录说明）见 [技能自述](skills/dify-workflow-dsl/README.md)，此处不重复。
 
