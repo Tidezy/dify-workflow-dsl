@@ -25,7 +25,7 @@ tests/                      校验器回归测试与正反夹具
 
 ## 快速开始
 
-> 以下命令在本技能目录（`skills/dify-workflow-dsl/`）内执行。
+> 以下命令在本目录内执行。
 
 ```bash
 # 校验一个 DSL 文件
@@ -55,25 +55,25 @@ python -m unittest discover -s tests -v
 
 WARN 与 ERROR 分开：`--strict` 把 WARN 也计为失败。少数 WARN 是有意为之——模板里的 `<dataset-id>` 占位符与 Agent 包里的 `credential_ref: null`，替换后即可通过。
 
-## 安装为技能
+## 安装
 
-本目录是一个标准的单技能包（含 `SKILL.md`），复制到任意工具的技能目录即可：
+本目录是自包含的单技能包（顶层有 `SKILL.md`），把整个目录复制到目标工具的技能目录即可：
 
 ```bash
-# 在仓库根目录执行
-./install.sh --workbuddy     # ~/.workbuddy/skills（全工程可用）
-./install.sh --dest <项目>/.workbuddy/skills   # 只对单个工程生效
+cp -R dify-workflow-dsl <目标工具的技能目录>/
 ```
 
-Windows 用 `.\install.ps1 -Workbuddy`。也可以手动只复制本目录。
+复制后应存在 `<技能目录>/dify-workflow-dsl/SKILL.md`。目录内所有相对路径（`references/`、`examples/`、`scripts/`、`tests/`）都以本目录为基准，整体搬移不影响引用；目录名保持为 `dify-workflow-dsl`，与 `SKILL.md` 里的 `name` 一致。
+
+运行只依赖 Python 3.9+ 与 PyYAML，不需要本目录之外的任何文件。
 
 ## 已知边界
 
 - 只做静态校验，**不替代真实导入**。插件凭据、知识库 ID、触发器 URL 必须在目标工作区补齐。
-- 插件的动态字段（`tool_parameters`、`event_parameters`）以目标工作区导出为准，本仓库只能给出结构约束。
+- 插件的动态字段（`tool_parameters`、`event_parameters`）以目标工作区导出为准，本技能只能给出结构约束。
 - 0.7.0 的 Agent 包内部资产（技能、上传文件、工作区联系人）导出时被清洗，`omitted_assets` 非空需人工补回。
 - DSL 版本演进快，`version-deltas.md` 需随 Dify 版本更新；不确定时以目标实例导出的文件为准。
 
 ## 许可
 
-内部使用。示例与模板均为手写，字段取自 Dify 官方导出格式。
+MIT。示例与模板均为手写，字段取自 Dify 官方导出格式。
