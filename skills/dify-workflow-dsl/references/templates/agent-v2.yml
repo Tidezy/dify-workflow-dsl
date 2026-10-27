@@ -1,0 +1,127 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "Agent v2 骨架"
+  description: "在 Workflow 中嵌入可移植 Agent v2 节点的最小结构"
+  icon: "🧩"
+  icon_type: emoji
+  icon_background: "#E0E7FF"
+  mode: workflow
+  use_icon_as_answer_icon: false
+agent_packages:
+  helper_agent:
+    schema_version: 1
+    metadata:
+      name: "助手 Agent"
+      description: "按任务说明完成一次作业并返回文本"
+      role: helper
+      icon_type: emoji
+      icon: "🧩"
+      icon_background: "#E0E7FF"
+    soul:
+      schema_version: 1
+      prompt:
+        system_prompt: "你是执行型助手。只描述做了什么和结果，不编造来源。"
+      model:
+        plugin_id: langgenius/openai
+        model_provider: langgenius/openai/openai
+        model: gpt-4.1-mini
+        credential_ref: null
+        model_settings:
+          temperature: 0.2
+    omitted_assets: []
+dependencies:
+  - current_identifier: null
+    type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/openai:0.2.6@<sha256>
+      version: null
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "输入任务"
+          variables:
+            - label: "任务描述"
+              variable: task
+              type: paragraph
+              required: true
+              max_length: 10000
+        position: {x: 80, y: 282}
+        positionAbsolute: {x: 80, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: n_agent
+        type: custom
+        data:
+          type: agent
+          title: "助手 Agent"
+          version: "2"
+          agent_node_kind: dify_agent
+          agent_binding:
+            binding_type: inline_agent
+            package_ref: helper_agent
+          agent_job:
+            schema_version: 1
+            mode: tell_agent_what_to_do
+            workflow_prompt: "完成用户给出的任务，输出结论与关键依据。"
+            previous_node_output_refs:
+              - selector: ["n_start", "task"]
+            declared_outputs:
+              - name: result
+                type: string
+                description: "任务结果"
+                required: true
+            human_contacts: []
+            metadata: {}
+          selected: false
+        position: {x: 380, y: 282}
+        positionAbsolute: {x: 380, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 270
+        height: 180
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: result
+              value_selector: ["n_agent", "result"]
+              value_type: string
+        position: {x: 720, y: 282}
+        positionAbsolute: {x: 720, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: n_start-source-n_agent-target
+        source: n_start
+        sourceHandle: source
+        target: n_agent
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: agent, isInIteration: false, isInLoop: false}
+      - id: n_agent-source-n_end-target
+        source: n_agent
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: agent, targetType: end, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7

@@ -1,0 +1,72 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：模板里用连字符节点 id"
+  mode: advanced-chat
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 80, y: 282}
+      - id: n-llm
+        type: custom
+        data:
+          type: llm
+          title: "LLM"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+          prompt_template:
+            - id: 22222222-0001-4000-9000-000000000001
+              role: system
+              text: "应答"
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            window:
+              enabled: false
+              size: 10
+          selected: false
+        position: {x: 380, y: 282}
+      - id: n_answer
+        type: custom
+        data:
+          type: answer
+          title: "回复"
+          answer: "{{#n-llm.text#}}"
+          variables: []
+        position: {x: 680, y: 282}
+    edges:
+      - id: n_start-source-n-llm-target
+        source: n_start
+        sourceHandle: source
+        target: "n-llm"
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: llm}
+      - id: n-llm-source-n_answer-target
+        source: "n-llm"
+        sourceHandle: source
+        target: n_answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: llm, targetType: answer}
+    viewport: {x: 0, y: 0, zoom: 0.7}

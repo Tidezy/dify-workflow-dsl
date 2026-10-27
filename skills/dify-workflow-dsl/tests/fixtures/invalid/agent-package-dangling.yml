@@ -1,0 +1,68 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：Agent 包引用悬空"
+  mode: workflow
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 80, y: 282}
+      - id: n_agent
+        type: custom
+        data:
+          type: agent
+          title: "Agent"
+          version: "2"
+          agent_node_kind: dify_agent
+          agent_binding:
+            binding_type: inline_agent
+            package_ref: not_defined
+          agent_job:
+            schema_version: 1
+            mode: tell_agent_what_to_do
+            workflow_prompt: "做点什么"
+            declared_outputs: []
+          selected: false
+        position: {x: 380, y: 282}
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: result
+              value_selector: ["n_agent", "text"]
+              value_type: string
+        position: {x: 720, y: 282}
+    edges:
+      - id: n_start-source-n_agent-target
+        source: n_start
+        sourceHandle: source
+        target: n_agent
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: agent}
+      - id: n_agent-source-n_end-target
+        source: n_agent
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: agent, targetType: end}
+    viewport: {x: 0, y: 0, zoom: 0.7}

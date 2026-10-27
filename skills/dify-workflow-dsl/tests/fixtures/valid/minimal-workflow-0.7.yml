@@ -1,0 +1,89 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "最小 Workflow"
+  description: "仅用于回归测试的最小可导入文件"
+  icon: "🧪"
+  icon_type: emoji
+  icon_background: "#E5E7EB"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables:
+            - label: "数字"
+              variable: num
+              type: number
+              required: true
+        position: {x: 80, y: 282}
+        positionAbsolute: {x: 80, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: n_code
+        type: custom
+        data:
+          type: code
+          title: "翻倍"
+          code_language: python3
+          code: |
+            def main(num: int) -> dict:
+                return {"doubled": int(num) * 2}
+          variables:
+            - variable: num
+              value_selector: ["n_start", "num"]
+          outputs:
+            doubled:
+              type: number
+              children: null
+          selected: false
+        position: {x: 380, y: 282}
+        positionAbsolute: {x: 380, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 100
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: doubled
+              value_selector: ["n_code", "doubled"]
+              value_type: number
+        position: {x: 680, y: 282}
+        positionAbsolute: {x: 680, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: n_start-source-n_code-target
+        source: n_start
+        sourceHandle: source
+        target: n_code
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: code, isInIteration: false, isInLoop: false}
+      - id: n_code-source-n_end-target
+        source: n_code
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: code, targetType: end, isInIteration: false, isInLoop: false}
+    viewport: {x: 0, y: 0, zoom: 0.7}

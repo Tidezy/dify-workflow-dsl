@@ -1,0 +1,155 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "人工审批"
+  description: "收集审批意见与风险等级，按动作分支收口（Human Input 完整示例）"
+  icon: "✅"
+  icon_type: emoji
+  icon_background: "#DCFCE7"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "提交审批"
+          variables:
+            - label: "审批内容"
+              variable: proposal
+              type: paragraph
+              required: true
+              max_length: 10000
+        position: {x: 40, y: 300}
+        positionAbsolute: {x: 40, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: n_human
+        type: custom
+        data:
+          type: human-input
+          title: "人工复核"
+          delivery_methods:
+            - id: webapp
+              type: webapp
+              enabled: true
+          form_content: "请复核以下内容：\n\n{{#n_start.proposal#}}"
+          inputs:
+            - type: paragraph
+              output_variable_name: comment
+              default:
+                type: constant
+                selector: []
+                value: ""
+            - type: select
+              output_variable_name: risk_level
+              option_source:
+                type: constant
+                selector: []
+                value: ["低", "中", "高"]
+            - type: file-list
+              output_variable_name: evidence
+              allowed_file_types: ["document", "image"]
+              allowed_file_extensions: []
+              allowed_file_upload_methods: ["local_file"]
+              number_limits: 3
+          user_actions:
+            - id: approve
+              title: "通过"
+              button_style: primary
+            - id: reject
+              title: "退回"
+              button_style: default
+          timeout: 24
+          timeout_unit: hour
+          selected: false
+        position: {x: 370, y: 300}
+        positionAbsolute: {x: 370, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 280
+        height: 210
+      - id: n_end_ok
+        type: custom
+        data:
+          type: end
+          title: "审批通过"
+          outputs:
+            - variable: decision
+              value_selector: ["n_human", "__action_id"]
+              value_type: string
+            - variable: comment
+              value_selector: ["n_human", "comment"]
+              value_type: string
+            - variable: risk_level
+              value_selector: ["n_human", "risk_level"]
+              value_type: string
+        position: {x: 730, y: 190}
+        positionAbsolute: {x: 730, y: 190}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 120
+      - id: n_end_back
+        type: custom
+        data:
+          type: end
+          title: "超时或退回"
+          outputs:
+            - variable: decision
+              value_selector: ["n_human", "__action_id"]
+              value_type: string
+            - variable: comment
+              value_selector: ["n_human", "comment"]
+              value_type: string
+        position: {x: 730, y: 430}
+        positionAbsolute: {x: 730, y: 430}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 120
+    edges:
+      - id: n_start-source-n_human-target
+        source: n_start
+        sourceHandle: source
+        target: n_human
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: human-input, isInIteration: false, isInLoop: false}
+      - id: n_human-approve-n_end_ok-target
+        source: n_human
+        sourceHandle: approve
+        target: n_end_ok
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
+      - id: n_human-reject-n_end_back-target
+        source: n_human
+        sourceHandle: reject
+        target: n_end_back
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
+      - id: n_human-__timeout-n_end_back-target
+        source: n_human
+        sourceHandle: "__timeout"
+        target: n_end_back
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.78

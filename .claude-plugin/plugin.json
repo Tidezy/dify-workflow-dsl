@@ -1,0 +1,18 @@
+{
+  "name": "dify-workflow-dsl",
+  "description": "Dify 工作流 DSL 生成与校验：从自然语言生成可导入的 YAML/JSON，覆盖 DSL 0.6.0（Dify 1.15.x）与 0.7.0（Dify 1.16.x）。",
+  "version": "1.0.0",
+  "author": {
+    "name": "zhouz"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dify",
+    "workflow",
+    "dsl",
+    "chatflow",
+    "agent",
+    "low-code",
+    "yaml"
+  ]
+}

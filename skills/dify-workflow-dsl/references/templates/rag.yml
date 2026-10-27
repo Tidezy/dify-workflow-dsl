@@ -1,0 +1,145 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "知识库问答"
+  description: "Start -> 知识检索 -> LLM(context) -> Answer"
+  icon: "📚"
+  icon_type: emoji
+  icon_background: "#DBEAFE"
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: "基于知识库回答问题。"
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 80, y: 282}
+        positionAbsolute: {x: 80, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: n_kb
+        type: custom
+        data:
+          type: knowledge-retrieval
+          title: "知识检索"
+          dataset_ids:
+            - "<dataset-id>"
+          query_variable_selector: ["sys", "query"]
+          retrieval_mode: multiple
+          multiple_retrieval_config:
+            top_k: 4
+            score_threshold_enabled: false
+            score_threshold: null
+            reranking_enable: false
+          metadata_filtering_mode: disabled
+          selected: false
+        position: {x: 380, y: 282}
+        positionAbsolute: {x: 380, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 96
+      - id: n_llm
+        type: custom
+        data:
+          type: llm
+          title: "生成回答"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          prompt_template:
+            - id: 8a2d4c6e-0001-4b00-9000-000000000001
+              role: system
+              text: "只依据给定资料回答；资料不足时明确说明。"
+            - id: 8a2d4c6e-0002-4b00-9000-000000000002
+              role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: true
+            variable_selector: ["n_kb", "result"]
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            role_prefix:
+              assistant: ""
+              user: ""
+            window:
+              enabled: true
+              size: 10
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 680, y: 282}
+        positionAbsolute: {x: 680, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 98
+      - id: n_answer
+        type: custom
+        data:
+          type: answer
+          title: "回复"
+          answer: "{{#n_llm.text#}}"
+          variables: []
+        position: {x: 980, y: 282}
+        positionAbsolute: {x: 980, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 110
+    edges:
+      - id: n_start-source-n_kb-target
+        source: n_start
+        sourceHandle: source
+        target: n_kb
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: knowledge-retrieval, isInIteration: false, isInLoop: false}
+      - id: n_kb-source-n_llm-target
+        source: n_kb
+        sourceHandle: source
+        target: n_llm
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: knowledge-retrieval, targetType: llm, isInIteration: false, isInLoop: false}
+      - id: n_llm-source-n_answer-target
+        source: n_llm
+        sourceHandle: source
+        target: n_answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: llm, targetType: answer, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7

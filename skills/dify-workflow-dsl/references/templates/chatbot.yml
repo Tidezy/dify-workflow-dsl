@@ -1,0 +1,124 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "简单对话"
+  description: "Start -> LLM -> Answer 的最小 Chatflow 骨架"
+  icon: "🤖"
+  icon_type: emoji
+  icon_background: "#FFEAD5"
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: "你好，有什么可以帮你？"
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+      - "你能做什么？"
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 80, y: 282}
+        positionAbsolute: {x: 80, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: n_llm
+        type: custom
+        data:
+          type: llm
+          title: "对话模型"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          prompt_template:
+            - id: 3f7c1a2e-0001-4a00-9000-000000000001
+              role: system
+              text: "你是一名简洁、准确的中文助理。"
+            - id: 3f7c1a2e-0002-4a00-9000-000000000002
+              role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            role_prefix:
+              assistant: ""
+              user: ""
+            window:
+              enabled: true
+              size: 10
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 380, y: 282}
+        positionAbsolute: {x: 380, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 98
+      - id: n_answer
+        type: custom
+        data:
+          type: answer
+          title: "回复"
+          answer: "{{#n_llm.text#}}"
+          variables: []
+        position: {x: 680, y: 282}
+        positionAbsolute: {x: 680, y: 282}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 110
+    edges:
+      - id: n_start-source-n_llm-target
+        source: n_start
+        sourceHandle: source
+        target: n_llm
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data:
+          sourceType: start
+          targetType: llm
+          isInIteration: false
+          isInLoop: false
+      - id: n_llm-source-n_answer-target
+        source: n_llm
+        sourceHandle: source
+        target: n_answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data:
+          sourceType: llm
+          targetType: answer
+          isInIteration: false
+          isInLoop: false
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7

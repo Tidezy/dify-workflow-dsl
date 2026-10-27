@@ -1,0 +1,74 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：分支句柄不匹配"
+  mode: workflow
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 80, y: 282}
+        width: 244
+        height: 54
+      - id: n_if
+        type: custom
+        data:
+          type: if-else
+          title: "判断"
+          cases:
+            - id: "case1"
+              case_id: "case1"
+              logical_operator: and
+              conditions:
+                - id: 0b5f09ef-0001-4000-9000-000000000001
+                  variable_selector: ["sys", "query"]
+                  comparison_operator: contains
+                  value: "合同"
+                  varType: string
+          selected: false
+        position: {x: 380, y: 282}
+        width: 244
+        height: 120
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: hit
+              value_selector: ["n_if", "result"]
+              value_type: string
+        position: {x: 680, y: 282}
+        width: 244
+        height: 90
+    edges:
+      - id: n_start-source-n_if-target
+        source: n_start
+        sourceHandle: source
+        target: n_if
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: if-else}
+      - id: n_if-CASE_1-n_end-target
+        source: n_if
+        sourceHandle: "CASE 1"
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: if-else, targetType: end}
+    viewport: {x: 0, y: 0, zoom: 0.7}

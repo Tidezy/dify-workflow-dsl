@@ -1,0 +1,147 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "质量门槛循环"
+  description: "Loop 容器内累计检查次数，达到阈值后退出（含 assigner v2 写法）"
+  icon: "🔄"
+  icon_type: emoji
+  icon_background: "#EDE9FE"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 40, y: 280}
+        positionAbsolute: {x: 40, y: 280}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: n_loop
+        type: custom
+        data:
+          type: loop
+          title: "质量检查循环"
+          loop_count: 5
+          logical_operator: and
+          loop_variables:
+            - id: review_count
+              label: review_count
+              value: "0"
+              value_type: constant
+              var_type: number
+          break_conditions:
+            - id: enough_reviews
+              variable_selector: ["n_loop", "review_count"]
+              comparison_operator: "≥"
+              value: "3"
+              varType: number
+          start_node_id: n_loop_start
+          width: 520
+          height: 210
+        position: {x: 350, y: 250}
+        positionAbsolute: {x: 350, y: 250}
+        sourcePosition: right
+        targetPosition: left
+        width: 520
+        height: 210
+        zIndex: 1
+      - id: n_loop_start
+        parentId: n_loop
+        type: custom-loop-start
+        draggable: false
+        selectable: false
+        data:
+          type: loop-start
+          title: ""
+          isInLoop: true
+        position: {x: 60, y: 80}
+        positionAbsolute: {x: 410, y: 330}
+        sourcePosition: right
+        targetPosition: left
+        width: 44
+        height: 48
+        zIndex: 1002
+      - id: n_inc
+        parentId: n_loop
+        type: custom
+        data:
+          type: assigner
+          title: "检查次数 +1"
+          version: "2"
+          isInIteration: false
+          isInLoop: true
+          loop_id: n_loop
+          items:
+            - variable_selector: ["n_loop", "review_count"]
+              input_type: constant
+              operation: "+="
+              value: 1
+              write_mode: over-write
+          selected: false
+        position: {x: 190, y: 62}
+        positionAbsolute: {x: 540, y: 312}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 86
+        zIndex: 1002
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出检查次数"
+          outputs:
+            - variable: review_count
+              value_selector: ["n_loop", "review_count"]
+              value_type: number
+        position: {x: 940, y: 280}
+        positionAbsolute: {x: 940, y: 280}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: n_start-source-n_loop-target
+        source: n_start
+        sourceHandle: source
+        target: n_loop
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: loop, isInIteration: false, isInLoop: false}
+      - id: n_loop_start-source-n_inc-target
+        source: n_loop_start
+        sourceHandle: source
+        target: n_inc
+        targetHandle: target
+        type: custom
+        zIndex: 1002
+        data:
+          sourceType: loop-start
+          targetType: assigner
+          isInIteration: false
+          isInLoop: true
+          loop_id: n_loop
+      - id: n_loop-source-n_end-target
+        source: n_loop
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: loop, targetType: end, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.75

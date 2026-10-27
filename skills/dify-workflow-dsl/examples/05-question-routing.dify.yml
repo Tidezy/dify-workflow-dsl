@@ -1,0 +1,228 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "问题分流"
+  description: "Question Classifier 按类别分流到不同分支，再用 Variable Aggregator 收口（分支句柄示例）"
+  icon: "🔀"
+  icon_type: emoji
+  icon_background: "#FCE7F3"
+  mode: advanced-chat
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: "问点什么？"
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables: []
+        position: {x: 40, y: 300}
+        positionAbsolute: {x: 40, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 54
+      - id: n_cls
+        type: custom
+        data:
+          type: question-classifier
+          title: "问题分类"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0
+          query_variable_selector: ["sys", "query"]
+          classes:
+            - id: "tech"
+              name: "技术问题"
+            - id: "billing"
+              name: "账单问题"
+          instruction: "把用户问题分到技术或账单两类。"
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 340, y: 300}
+        positionAbsolute: {x: 340, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 120
+      - id: n_llm_tech
+        type: custom
+        data:
+          type: llm
+          title: "技术回答"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          prompt_template:
+            - id: 7d2b9e10-0001-4e00-9000-000000000001
+              role: system
+              text: "你是技术支持工程师，回答要给出可操作步骤。"
+            - id: 7d2b9e10-0002-4e00-9000-000000000002
+              role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            role_prefix:
+              assistant: ""
+              user: ""
+            window:
+              enabled: false
+              size: 10
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 680, y: 180}
+        positionAbsolute: {x: 680, y: 180}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 98
+      - id: n_llm_billing
+        type: custom
+        data:
+          type: llm
+          title: "账单回答"
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          prompt_template:
+            - id: 7d2b9e11-0001-4e00-9000-000000000001
+              role: system
+              text: "你是账单客服，先确认订单号再给结论。"
+            - id: 7d2b9e11-0002-4e00-9000-000000000002
+              role: user
+              text: "{{#sys.query#}}"
+          context:
+            enabled: false
+            variable_selector: []
+          memory:
+            query_prompt_template: "{{#sys.query#}}"
+            role_prefix:
+              assistant: ""
+              user: ""
+            window:
+              enabled: false
+              size: 10
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 680, y: 420}
+        positionAbsolute: {x: 680, y: 420}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 98
+      - id: n_agg
+        type: custom
+        data:
+          type: variable-aggregator
+          title: "合并分支"
+          output_type: string
+          variables:
+            - ["n_llm_tech", "text"]
+            - ["n_llm_billing", "text"]
+          selected: false
+        position: {x: 1020, y: 300}
+        positionAbsolute: {x: 1020, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: n_answer
+        type: custom
+        data:
+          type: answer
+          title: "回复"
+          answer: "{{#n_agg.output#}}"
+          variables: []
+        position: {x: 1320, y: 300}
+        positionAbsolute: {x: 1320, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 110
+    edges:
+      - id: n_start-source-n_cls-target
+        source: n_start
+        sourceHandle: source
+        target: n_cls
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: question-classifier, isInIteration: false, isInLoop: false}
+      - id: n_cls-tech-n_llm_tech-target
+        source: n_cls
+        sourceHandle: "tech"
+        target: n_llm_tech
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: question-classifier, targetType: llm, isInIteration: false, isInLoop: false}
+      - id: n_cls-billing-n_llm_billing-target
+        source: n_cls
+        sourceHandle: "billing"
+        target: n_llm_billing
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: question-classifier, targetType: llm, isInIteration: false, isInLoop: false}
+      - id: n_llm_tech-source-n_agg-target
+        source: n_llm_tech
+        sourceHandle: source
+        target: n_agg
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: llm, targetType: variable-aggregator, isInIteration: false, isInLoop: false}
+      - id: n_llm_billing-source-n_agg-target
+        source: n_llm_billing
+        sourceHandle: source
+        target: n_agg
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: llm, targetType: variable-aggregator, isInIteration: false, isInLoop: false}
+      - id: n_agg-source-n_answer-target
+        source: n_agg
+        sourceHandle: source
+        target: n_answer
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: variable-aggregator, targetType: answer, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7

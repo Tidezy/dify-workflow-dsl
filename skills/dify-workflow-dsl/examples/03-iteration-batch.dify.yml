@@ -1,0 +1,185 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "批量摘要"
+  description: "把多行文本拆成数组，逐条过 LLM 摘要（Iteration 容器完整示例）"
+  icon: "📄"
+  icon_type: emoji
+  icon_background: "#FEF3C7"
+  mode: workflow
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "输入多行文本"
+          variables:
+            - label: "每行一条"
+              variable: lines
+              type: paragraph
+              required: true
+              max_length: 20000
+        position: {x: 40, y: 300}
+        positionAbsolute: {x: 40, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+      - id: n_split
+        type: custom
+        data:
+          type: code
+          title: "拆成数组"
+          code_language: python3
+          code: |
+            def main(lines: str) -> dict:
+                items = [line.strip() for line in lines.splitlines() if line.strip()]
+                return {"items": items}
+          variables:
+            - variable: lines
+              value_selector: ["n_start", "lines"]
+          outputs:
+            items:
+              type: array[string]
+              children: null
+          selected: false
+        position: {x: 340, y: 300}
+        positionAbsolute: {x: 340, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 110
+      - id: n_iter
+        type: custom
+        data:
+          type: iteration
+          title: "逐条摘要"
+          iterator_selector: ["n_split", "items"]
+          output_selector: ["n_item_llm", "text"]
+          output_type: array[string]
+          is_parallel: false
+          parallel_nums: 10
+          start_node_id: n_iter_start
+          width: 620
+          height: 200
+        position: {x: 640, y: 270}
+        positionAbsolute: {x: 640, y: 270}
+        sourcePosition: right
+        targetPosition: left
+        width: 620
+        height: 200
+        zIndex: 1
+      - id: n_iter_start
+        parentId: n_iter
+        type: custom-iteration-start
+        draggable: false
+        selectable: false
+        data:
+          type: iteration-start
+          title: ""
+          isInIteration: true
+        position: {x: 36, y: 74}
+        positionAbsolute: {x: 676, y: 344}
+        sourcePosition: right
+        targetPosition: left
+        width: 44
+        height: 48
+        zIndex: 1002
+      - id: n_item_llm
+        parentId: n_iter
+        type: custom
+        data:
+          type: llm
+          title: "单条摘要"
+          isInIteration: true
+          iteration_id: n_iter
+          model:
+            provider: langgenius/openai/openai
+            name: gpt-4o-mini
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          prompt_template:
+            - id: 5c1f7a90-0001-4d00-9000-000000000001
+              role: system
+              text: "用一句中文概括给定内容，不超过 30 字。"
+            - id: 5c1f7a90-0002-4d00-9000-000000000002
+              role: user
+              text: "{{#n_iter.item#}}"
+          context:
+            enabled: false
+            variable_selector: []
+          vision:
+            enabled: false
+          selected: false
+        position: {x: 150, y: 50}
+        positionAbsolute: {x: 790, y: 320}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 98
+        zIndex: 1002
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "输出摘要数组"
+          outputs:
+            - variable: summaries
+              value_selector: ["n_iter", "output"]
+              value_type: array[string]
+        position: {x: 1310, y: 300}
+        positionAbsolute: {x: 1310, y: 300}
+        sourcePosition: right
+        targetPosition: left
+        width: 244
+        height: 90
+    edges:
+      - id: n_start-source-n_split-target
+        source: n_start
+        sourceHandle: source
+        target: n_split
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: code, isInIteration: false, isInLoop: false}
+      - id: n_split-source-n_iter-target
+        source: n_split
+        sourceHandle: source
+        target: n_iter
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: code, targetType: iteration, isInIteration: false, isInLoop: false}
+      - id: n_iter_start-source-n_item_llm-target
+        source: n_iter_start
+        sourceHandle: source
+        target: n_item_llm
+        targetHandle: target
+        type: custom
+        zIndex: 1002
+        data:
+          sourceType: iteration-start
+          targetType: llm
+          isInIteration: true
+          isInLoop: false
+          iteration_id: n_iter
+      - id: n_iter-source-n_end-target
+        source: n_iter
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: iteration, targetType: end, isInIteration: false, isInLoop: false}
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7
