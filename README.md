@@ -8,7 +8,7 @@ Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JS
 
 | 技能 | 作用 | 入口 |
 |---|---|---|
-| `dify-workflow-dsl` | 自然语言 → 可导入 DSL；含方案选型、导入排查、21 个节点规范、4 个模板、5 个完整样例、静态校验器 | [`skills/dify-workflow-dsl/`](skills/dify-workflow-dsl/SKILL.md) |
+| `dify-workflow-dsl` | 自然语言 → 可导入 DSL；含方案选型、导入排查、21 个节点规范、4 个模板、5 个完整样例、静态校验器（含字段级引用检查）、交付清单生成器 | [`skills/dify-workflow-dsl/`](skills/dify-workflow-dsl/SKILL.md) |
 
 技能开发与校验细节（目录说明、校验器覆盖范围、已知边界）见 [技能开发说明](docs/dify-workflow-dsl.md)，此处不重复。
 
@@ -52,6 +52,7 @@ Windows 用 `.\install.ps1`，参数同名（`-Workbuddy` / `-Agents` / `-Claude
 # 在 skills/dify-workflow-dsl/ 内
 python scripts/validate_dsl.py --strict --target-version 0.7.0 examples/*.yml
 python scripts/validate_dsl.py references/templates/*.yml   # 模板含 <dataset-id> 占位符，只跑非严格
+python scripts/deliver_checklist.py examples/*.yml          # 交付清单，确认能跑通
 
 # 在仓库根目录
 python -m unittest discover -s tests -v

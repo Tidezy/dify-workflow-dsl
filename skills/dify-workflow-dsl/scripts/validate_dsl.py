@@ -3,7 +3,7 @@
 """Dify DSL 静态校验器（支持 DSL 0.6.0 / 0.7.0）。
 
 只做静态检查，不替代真实工作区导入与运行测试。检查项：
-版本与模式、节点字段、边与分支句柄、选择器与模板引用、容器结构、
+版本与模式、节点字段、边与分支句柄、选择器与模板引用（含字段级引用）、容器结构、
 可达性与环、Agent 包、Human Input、插件依赖。
 
 用法：
@@ -64,6 +64,42 @@ SELECTOR_KEYS = {
 ROOT_SELECTORS = {"sys", "env", "conversation"}
 TEMPLATE_RE = re.compile(r"\{\{#([^#{}]*)#\}\}")
 NODE_ID_RE = re.compile(r"^[A-Za-z0-9_]{1,50}$")
+
+# 各节点类型的固定输出字段（见 references/nodes/*.md 的「数据流」小节）。
+# 下游用 ["node", "field"] 或 {{#node.field#}} 引用不存在的字段时，导入不报错、运行期取到空值，
+# 所以这里按类型校验；输出由插件 schema 决定的类型不列入，避免误报。
+FIXED_OUTPUTS: Dict[str, Set[str]] = {
+    "llm": {"text", "reasoning_content", "usage"},
+    "http-request": {"body", "status_code", "headers", "files"},
+    "knowledge-retrieval": {"result"},
+    "iteration": {"output", "item", "index"},   # item/index 仅在容器内可引用（当前元素、当前下标）
+    "template-transform": {"output"},
+    "list-operator": {"result"},
+    "variable-aggregator": {"output"},
+    "document-extractor": {"text"},
+    "question-classifier": {"class_name"},
+    "parameter-extractor": {"__is_success", "__reason"},
+    "human-input": {"__action_id", "__action_value", "__rendered_content"},
+    "start": set(),          # 由 variables 决定
+    "code": set(),           # 由 outputs 决定
+    "loop": set(),           # 由 loop_variables 决定
+    "agent": set(),          # 由 declared_outputs 决定
+    "if-else": set(),
+    "assigner": set(),
+    "variable-assigner": set(),
+    "end": set(),
+    "answer": set(),
+    "knowledge-index": set(),
+    "iteration-start": set(),
+    "loop-start": set(),
+}
+
+# 输出字段由插件 / 触发器 schema 决定，无法静态枚举：不做字段检查
+UNKNOWN_OUTPUT_TYPES = {
+    "tool", "datasource",
+    "trigger-schedule", "trigger-webhook", "trigger-plugin",
+    "custom-note",
+}
 
 
 class Report:
@@ -234,8 +270,9 @@ def check_graph(doc: Dict[str, Any], rep: Report, mode: str) -> None:
     check_edges(edges, node_map, type_map, rep)
     check_entries_and_terminals(nodes, edges, node_map, type_map, rep, mode)
     check_reachability(nodes, edges, node_map, type_map, rep, mode)
-    check_selectors(nodes, node_map, rep)
-    check_templates(doc, node_map, rep)
+    outputs = build_output_map(doc, node_map)
+    check_selectors(nodes, node_map, rep, doc, outputs)
+    check_templates(doc, node_map, rep, outputs)
 
 
 def index_nodes(nodes: List[Any], rep: Report, doc: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, str]]:
@@ -798,8 +835,75 @@ def check_reachability(
             dfs(start)
 
 
-def check_selectors(nodes: List[Any], node_map: Dict[str, Dict[str, Any]], rep: Report) -> None:
+def build_output_map(doc: Dict[str, Any], node_map: Dict[str, Dict[str, Any]]) -> Dict[str, Optional[Set[str]]]:
+    """每个节点可被下游引用的输出字段集合；None 表示由插件/触发器 schema 决定，不做字段检查。"""
+    outputs: Dict[str, Optional[Set[str]]] = {}
+    for nid, node in node_map.items():
+        data = node.get("data") if isinstance(node.get("data"), dict) else {}
+        dtype = data.get("type")
+        if not isinstance(dtype, str) or dtype in UNKNOWN_OUTPUT_TYPES:
+            outputs[nid] = None
+            continue
+
+        fields: Set[str] = set(FIXED_OUTPUTS.get(dtype, set()))
+        if dtype == "start":
+            fields |= {
+                str(v.get("variable")) for v in _as_list(data.get("variables"))
+                if isinstance(v, dict) and v.get("variable")
+            }
+        elif dtype == "code":
+            outs = data.get("outputs")
+            if isinstance(outs, dict):
+                fields |= {str(k) for k in outs}
+        elif dtype == "loop":
+            fields |= {
+                str(v.get("label")) for v in _as_list(data.get("loop_variables"))
+                if isinstance(v, dict) and v.get("label")
+            }
+        elif dtype == "human-input":
+            fields |= {
+                str(i.get("output_variable_name")) for i in _as_list(data.get("inputs"))
+                if isinstance(i, dict) and i.get("output_variable_name")
+            }
+        elif dtype == "parameter-extractor":
+            fields |= {
+                str(p.get("name")) for p in _as_list(data.get("parameters"))
+                if isinstance(p, dict) and p.get("name")
+            }
+        elif dtype == "agent":
+            job = data.get("agent_job") if isinstance(data.get("agent_job"), dict) else {}
+            declared = [
+                str(o.get("name")) for o in _as_list(job.get("declared_outputs"))
+                if isinstance(o, dict) and o.get("name")
+            ]
+            fields |= set(declared) if declared else {"text", "files", "json"}
+        elif dtype == "llm" and data.get("structured_output_enabled"):
+            # 结构化输出的字段由 schema 决定，静态看不出全部
+            outputs[nid] = None
+            continue
+
+        outputs[nid] = fields
+    return outputs
+
+
+def _declared_variable_names(doc: Dict[str, Any], key: str) -> Set[str]:
+    workflow = doc.get("workflow") if isinstance(doc.get("workflow"), dict) else {}
+    return {
+        str(v.get("name")) for v in _as_list(workflow.get(key))
+        if isinstance(v, dict) and v.get("name")
+    }
+
+
+def check_selectors(
+    nodes: List[Any],
+    node_map: Dict[str, Dict[str, Any]],
+    rep: Report,
+    doc: Dict[str, Any],
+    outputs: Dict[str, Optional[Set[str]]],
+) -> None:
     valid_roots = set(node_map) | ROOT_SELECTORS
+    env_names = _declared_variable_names(doc, "environment_variables")
+    conv_names = _declared_variable_names(doc, "conversation_variables")
     for node in nodes:
         if not isinstance(node, dict):
             continue
@@ -819,12 +923,45 @@ def check_selectors(nodes: List[Any], node_map: Dict[str, Dict[str, Any]], rep: 
             if not isinstance(root, str):
                 rep.error("selector.root-type", f"{label}.{path}[0] 必须是字符串，当前 {root!r}")
                 continue
-            if root in valid_roots:
+            field = str(value[1])
+            if root == "sys" or field.startswith("sys."):
+                continue                     # sys 的字段随模式与版本变化，不做枚举
+            if root == "env":
+                if field not in env_names:
+                    rep.error(
+                        "selector.unknown-env",
+                        f"{label}.{path} 引用了 {root}.{field}，但 workflow.environment_variables 里没有这个变量",
+                    )
                 continue
-            rep.error("selector.unknown-node", f"{label}.{path} 引用了不存在的节点 {root!r}")
+            if root == "conversation":
+                if field not in conv_names:
+                    rep.error(
+                        "selector.unknown-conversation",
+                        f"{label}.{path} 引用了 {root}.{field}，但 workflow.conversation_variables 里没有这个变量",
+                    )
+                continue
+            if root not in valid_roots:
+                rep.error("selector.unknown-node", f"{label}.{path} 引用了不存在的节点 {root!r}")
+                continue
+            known = outputs.get(root)
+            if known is None:
+                continue                     # 输出由插件 schema 决定，静态不可判
+            if field not in known:
+                rep.error(
+                    "selector.unknown-field",
+                    f"{label}.{path} 引用了 {root}.{field}，但该节点没有这个输出"
+                    f"（可用：{', '.join(sorted(known)) if known else '无，该类型不产生输出'}）",
+                )
 
 
-def check_templates(doc: Dict[str, Any], node_map: Dict[str, Dict[str, Any]], rep: Report) -> None:
+def check_templates(
+    doc: Dict[str, Any],
+    node_map: Dict[str, Dict[str, Any]],
+    rep: Report,
+    outputs: Dict[str, Optional[Set[str]]],
+) -> None:
+    env_names = _declared_variable_names(doc, "environment_variables")
+    conv_names = _declared_variable_names(doc, "conversation_variables")
     for path, value in _walk(doc):
         if not isinstance(value, str) or "{{#" not in value:
             continue
@@ -834,7 +971,24 @@ def check_templates(doc: Dict[str, Any], node_map: Dict[str, Dict[str, Any]], re
                 rep.warn("template.shape", f"{path} 中的 {{{{#{ref}#}}}} 缺少 .字段 部分")
                 continue
             node_part, field_part = ref.split(".", 1)
+            field = field_part.split(".", 1)[0]
             if not node_part:
+                continue
+            if node_part == "sys":
+                continue                      # sys 的字段不做枚举
+            if node_part == "env":
+                if field not in env_names:
+                    rep.error(
+                        "template.unknown-env",
+                        f"{path} 引用了 {{{{#{ref}#}}}}，但 workflow.environment_variables 里没有 {field!r}",
+                    )
+                continue
+            if node_part == "conversation":
+                if field not in conv_names:
+                    rep.error(
+                        "template.unknown-conversation",
+                        f"{path} 引用了 {{{{#{ref}#}}}}，但 workflow.conversation_variables 里没有 {field!r}",
+                    )
                 continue
             if "-" in node_part or not NODE_ID_RE.match(node_part):
                 rep.error(
@@ -842,8 +996,18 @@ def check_templates(doc: Dict[str, Any], node_map: Dict[str, Dict[str, Any]], re
                     f"{path} 引用了 {{{{#{ref}#}}}}，但模板里的节点 id 只能是字母/数字/下划线（1-50 字符），含连字符的 id 在运行期解析失败",
                 )
                 continue
-            if node_part not in node_map and node_part not in {"sys", "env", "conversation"}:
+            if node_part not in node_map:
                 rep.warn("template.unknown-node", f"{path} 引用了不存在的节点 {node_part!r}")
+                continue
+            known = outputs.get(node_part)
+            if known is None:
+                continue
+            if field not in known:
+                rep.error(
+                    "template.unknown-field",
+                    f"{path} 引用了 {{{{#{ref}#}}}}，但节点 {node_part} 没有这个输出"
+                    f"（可用：{', '.join(sorted(known)) if known else '无，该类型不产生输出'}）",
+                )
 
 
 def check_dependencies(doc: Dict[str, Any], rep: Report) -> None:

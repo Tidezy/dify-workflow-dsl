@@ -27,7 +27,8 @@ compatibility: Requires Python 3.9+ and PyYAML.
 3. **查节点字段**：每个节点读对应的 `references/nodes/*.md`，字段名逐字照抄，不要凭记忆写。
 4. **写 YAML**：节点 id 用字符串（建议 `n_start`、`n_llm` 这类下划线风格），边按 `{source}-{handle}-{target}-target` 命名。
 5. **跑校验**：`python scripts/validate_dsl.py --strict --target-version <版本> <文件>`，把 ERROR 全部修掉；WARN 要么修，要么在回复里说明为什么可接受。
-6. **交付**：给出文件路径 + 版本 + 剩余需要在工作区手工完成的事项（绑凭据、填知识库 ID、重配 webhook）。
+6. **生成交付清单**：`python scripts/deliver_checklist.py <文件>`，把「导入后还要在目标工作区补什么」列成待办，不要靠回忆。
+7. **交付**：给出文件路径 + 版本 + 校验结果 + 清单里尚未完成的项。
 
 ## 节点路由表
 
@@ -64,6 +65,7 @@ compatibility: Requires Python 3.9+ and PyYAML.
 6. **容器三件套**：子节点要 `parentId` + `isInIteration`/`isInLoop` + `zIndex: 1002`；容器的 `start_node_id` 指向辅助起点节点（`custom-iteration-start` / `custom-loop-start`）。
 7. **插件必须进 `dependencies`**，`marketplace_plugin_unique_identifier` 只能从真实导出复制，不许自己拼。
 8. **模型名要真实**：`model.provider` 三段式、`model.name` 用该供应商实际提供的名称，编造名会在运行期报 provider 校验失败。
+9. **只能引用真实存在的输出字段**：`["node", "field"]` 与 `{{#node.field#}}` 都算；字段不存在时导入不报错、运行期取到空值。各节点的输出字段见对应 `references/nodes/*.md` 的「数据流」小节。
 
 ## 模板
 
@@ -93,13 +95,24 @@ python scripts/validate_dsl.py --format json examples/*.yml
 
 依赖 Python 3.9+ 与 PyYAML；缺失时先安装 PyYAML。
 
-校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
+校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点与**字段级引用**（引用不存在的输出、未声明的 `env` / `conversation` 变量）、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
+
+## 交付清单
+
+DSL 只描述结构，不含运行环境。`deliver_checklist.py` 把「插件没装、凭据没绑、知识库是占位符、触发器 URL 被清空、环境变量为空、Agent 包资产被剔」逐条列成待办，顺带给出输出契约：
+
+```bash
+python scripts/deliver_checklist.py app.dify.yml            # markdown 待办清单
+python scripts/deliver_checklist.py app.dify.yml --format json
+```
+
+交付时把清单里没完成的部分原样告诉用户，不要只说"已生成，导入即可"。
 
 ## 输出规范
 
 - 产物落在当前工作目录，文件名 `<kebab-case>.dify.yml`；中间产物放临时目录，不要混进交付目录。
 - YAML 用 2 空格缩进，所有字符串型 id 加引号。
-- 交付时说明三件事：目标版本、校验结果、导入后需要人工补的配置。
+- 交付时说明三件事：目标版本、校验结果、交付清单里还没完成的项。
 
 ## 覆盖范围
 
@@ -108,6 +121,7 @@ python scripts/validate_dsl.py --format json examples/*.yml
 | 方案 / 节点选型 / 改造思路 / Prompt 设计 | 直接给结论文字，不落文件 |
 | 可导入的 DSL | 走「生成流程」，产出 `<kebab-case>.dify.yml` 并跑校验 |
 | 导入失败排查 | 读现有 DSL 与报错，定位到节点、边句柄、选择器或版本，必要的给出修好的文件 |
+| 交付前准备 | 跑 `deliver_checklist.py`，把插件、凭据、知识库、触发器、变量的待办列清楚 |
 
 不负责：在 Dify 平台上点击搭建、发布、部署与验收；也不代为安装插件或填凭据。这些以目标工作区的实际状态为准，交付时列出需要在工作区补的项。
 

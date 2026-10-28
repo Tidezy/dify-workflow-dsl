@@ -22,7 +22,8 @@ skills/dify-workflow-dsl/   技能包（安装时整个目录复制）
     nodes/*.md              21 个节点的字段表、最小示例、导入失败原因
     templates/*.yml         4 个可直接改的骨架
   examples/*.dify.yml       5 个完整可导入样例
-  scripts/validate_dsl.py   静态校验器（版本/节点/边/选择器/容器/可达性/依赖）
+  scripts/validate_dsl.py   静态校验器（版本/节点/边/选择器/字段引用/容器/可达性/依赖）
+  scripts/deliver_checklist.py  交付清单生成器（插件/凭据/知识库/触发器/变量/输出契约）
 
 tests/                      校验器回归测试与正反夹具（开发期，不随技能安装）
 docs/dify-workflow-dsl.md   本文件（维护者文档，不随技能安装）
@@ -36,6 +37,9 @@ python scripts/validate_dsl.py app.dify.yml
 
 # 指定版本 + 严格模式
 python scripts/validate_dsl.py --strict --target-version 0.7.0 app.dify.yml
+
+# 生成交付清单（导入后要在工作区补什么）
+python scripts/deliver_checklist.py app.dify.yml
 
 # 在仓库根目录跑回归测试
 python -m unittest discover -s tests -v
@@ -52,11 +56,26 @@ python -m unittest discover -s tests -v
 | 节点 | 类型枚举、字段必填项（llm / code / end / if-else / classifier / human-input / assigner / tool / iteration / loop / agent） |
 | 边 | 端点存在、`targetHandle`、分支句柄与分支定义一致、`sourceType`/`targetType` 对齐 |
 | 引用 | `*_selector` 根节点存在、`{{#...#}}` 节点 id 字符合法、引用未知节点 |
+| 字段 | 引用的输出字段是否真实存在（`["node","field"]` 与 `{{#node.field#}}` 都查）；`env` / `conversation` 变量是否已声明 |
 | 容器 | `parentId`、`zIndex`、`isInIteration`/`isInLoop`、`start_node_id` 指向辅助起点 |
 | Agent | `agent_packages` 引用完整、`version: "2"`、`declared_outputs` 结构 |
 | 依赖 | 插件节点是否缺 `dependencies`、`plugin_unique_identifier` 形态 |
 
+字段级检查的边界，是想清楚「宁可漏、不可误报」：
+
+- 输出字段全部可枚举的类型才查（`llm`、`code`、`iteration`、`loop`、`human-input`、`parameter-extractor`、`end`…），表在 `validate_dsl.py` 的 `FIXED_OUTPUTS`；
+- 输出由插件/触发器 schema 决定的类型直接跳过（`tool`、`datasource`、`trigger-*`），否则 `tool` 的任意输出名都会炸；
+- `llm` 开了结构化输出时字段由 schema 决定，同样跳过；
+- `sys.*` 不枚举（随模式与版本变）；`iteration` 容器内的 `item` / `index` 视为合法输出；
+- 字段表依据 `references/nodes/*.md` 的「数据流」小节，与文档同步更新，不要凭印象加字段。
+
 WARN 与 ERROR 分开：`--strict` 把 WARN 也计为失败。少数 WARN 是有意为之——模板里的 `<dataset-id>` 占位符与 Agent 包里的 `credential_ref: null`，替换后即可通过。
+
+## 交付清单
+
+`scripts/deliver_checklist.py` 解决的是另一半问题：DSL 只写结构，运行环境全在目标工作区。脚本按「导入后要不要动手」把内容分成 `[ ]` 待办与说明两类，覆盖插件标识、模型与凭据、知识库 ID、触发器重配、外部调用与工具授权、人工节点投递、环境变量、输出契约、Agent 包资产，末尾附一条自查命令。
+
+设计上刻意不联网、不猜测：只读 DSL 里能看见的东西，占位符（`<...>`、`credential_ref: null`、`@<sha256>`）一律按"需替换"报，插件输出字段一律不下结论。`--format json` 给机器读。
 
 ## 安装
 
