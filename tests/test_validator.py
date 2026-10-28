@@ -10,8 +10,13 @@ import os
 import sys
 import unittest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "scripts"))
+# 避免在技能包的 scripts/ 下生成 __pycache__
+sys.dont_write_bytecode = True
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SKILL_ROOT = os.path.join(REPO_ROOT, "skills", "dify-workflow-dsl")
+TEST_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
 
 import validate_dsl  # noqa: E402
 
@@ -22,7 +27,7 @@ def codes(report):
 
 class ValidFiles(unittest.TestCase):
     def test_examples_have_no_errors(self):
-        files = sorted(glob.glob(os.path.join(ROOT, "examples", "*.yml")))
+        files = sorted(glob.glob(os.path.join(SKILL_ROOT, "examples", "*.yml")))
         self.assertTrue(files, "examples 目录下没有样本")
         for path in files:
             with self.subTest(path=os.path.basename(path)):
@@ -30,7 +35,7 @@ class ValidFiles(unittest.TestCase):
                 self.assertEqual([], rep.errors, msg=f"{path}: {rep.errors}")
 
     def test_templates_have_no_errors(self):
-        files = sorted(glob.glob(os.path.join(ROOT, "references", "templates", "*.yml")))
+        files = sorted(glob.glob(os.path.join(SKILL_ROOT, "references", "templates", "*.yml")))
         self.assertTrue(files, "templates 目录下没有样本")
         for path in files:
             with self.subTest(path=os.path.basename(path)):
@@ -38,7 +43,7 @@ class ValidFiles(unittest.TestCase):
                 self.assertEqual([], rep.errors, msg=f"{path}: {rep.errors}")
 
     def test_valid_fixtures(self):
-        for path in sorted(glob.glob(os.path.join(ROOT, "tests", "fixtures", "valid", "*.yml"))):
+        for path in sorted(glob.glob(os.path.join(TEST_ROOT, "fixtures", "valid", "*.yml"))):
             with self.subTest(path=os.path.basename(path)):
                 rep = validate_dsl.validate_file(path, None)
                 self.assertEqual([], rep.errors, msg=f"{path}: {rep.errors}")
@@ -54,7 +59,7 @@ class InvalidFixtures(unittest.TestCase):
 
     def test_invalid_fixtures_are_caught(self):
         found = set()
-        for path in sorted(glob.glob(os.path.join(ROOT, "tests", "fixtures", "invalid", "*.yml"))):
+        for path in sorted(glob.glob(os.path.join(TEST_ROOT, "fixtures", "invalid", "*.yml"))):
             name = os.path.basename(path)
             rep = validate_dsl.validate_file(path, None)
             with self.subTest(path=name):
@@ -68,7 +73,7 @@ class InvalidFixtures(unittest.TestCase):
 
 class VersionPolicy(unittest.TestCase):
     def test_target_version_mismatch(self):
-        path = os.path.join(ROOT, "tests", "fixtures", "valid", "minimal-workflow-0.7.yml")
+        path = os.path.join(TEST_ROOT, "fixtures", "valid", "minimal-workflow-0.7.yml")
         rep = validate_dsl.validate_file(path, "0.6.0")
         self.assertIn("version.mismatch", codes(rep))
 

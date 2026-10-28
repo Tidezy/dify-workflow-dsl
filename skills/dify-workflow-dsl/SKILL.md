@@ -1,6 +1,8 @@
 ---
 name: dify-workflow-dsl
 description: 从自然语言需求生成可直接导入 Dify 的工作流 DSL（YAML/JSON），支持 DSL 0.6.0（Dify 1.15.x）与 0.7.0（Dify 1.16.x）。用于新建 Dify 工作流/对话流/Agent 应用、改造已有 DSL、排查导入失败、补 Human Input / Loop / Iteration / Agent v2 节点结构。当用户提到 Dify、工作流 DSL、chatflow、导入报错、workflow.yml 时使用。
+license: MIT
+compatibility: Requires Python 3.9+ and PyYAML.
 ---
 
 # Dify 工作流 DSL 生成
@@ -87,10 +89,9 @@ python scripts/validate_dsl.py --strict --target-version 0.7.0 app.dify.yml
 
 # 批量，机器可读
 python scripts/validate_dsl.py --format json examples/*.yml
-
-# 校验器自身的回归
-python -m unittest discover -s tests -v
 ```
+
+依赖 Python 3.9+ 与 PyYAML；缺失时先安装 PyYAML。
 
 校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
 

@@ -10,7 +10,7 @@ Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JS
 |---|---|---|
 | `dify-workflow-dsl` | 自然语言 → 可导入 DSL；含方案选型、导入排查、21 个节点规范、4 个模板、5 个完整样例、静态校验器 | [`skills/dify-workflow-dsl/`](skills/dify-workflow-dsl/SKILL.md) |
 
-技能内部细节（校验器覆盖范围、已知边界、目录说明）见 [技能自述](skills/dify-workflow-dsl/README.md)，此处不重复。
+技能开发与校验细节（目录说明、校验器覆盖范围、已知边界）见 [技能开发说明](docs/dify-workflow-dsl.md)，此处不重复。
 
 ## 安装
 
@@ -40,18 +40,24 @@ Windows 用 `.\install.ps1`，参数同名（`-Workbuddy` / `-Agents` / `-Claude
 
 ### 手动
 
-把 `skills/dify-workflow-dsl/` 整个目录复制到目标工具的技能目录，保证目录内 `SKILL.md` 在顶层。
+把 `skills/dify-workflow-dsl/` 整个目录复制到目标工具的技能目录，保证目录内 `SKILL.md` 在顶层。该目录只包含运行时资产；`tests/` 与 `docs/` 不随技能安装。
 
 ## 开发约定
 
 - 技能是自包含的：`SKILL.md` 里的相对路径都以技能目录为基准，移动目录不影响引用；技能目录内不应出现指向仓库其他位置的引用。
-- 改动后必须跑通三条命令（在技能目录内）：
+- 技能目录只放运行时资产（`SKILL.md`、`references/`、`examples/`、`scripts/`）；`tests/` 与 `docs/` 属于开发资产，不随技能安装。
+- 改动后必须跑通三条命令：
 
 ```bash
+# 在 skills/dify-workflow-dsl/ 内
 python scripts/validate_dsl.py --strict --target-version 0.7.0 examples/*.yml
 python scripts/validate_dsl.py references/templates/*.yml   # 模板含 <dataset-id> 占位符，只跑非严格
+
+# 在仓库根目录
 python -m unittest discover -s tests -v
 ```
+
+依赖 Python 3.9+、PyYAML。
 
 - 新增 Dify 节点或版本时，同步更新三处：`references/nodes/<node>.md`、`SKILL.md` 的节点路由表、`references/version-deltas.md`。
 - 说明文字用中文，字段名与 YAML 关键字保持英文原样。

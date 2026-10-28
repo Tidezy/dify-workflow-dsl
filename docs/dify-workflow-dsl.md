@@ -1,4 +1,4 @@
-# dify-workflow-dsl
+# dify-workflow-dsl 技能开发说明
 
 从自然语言需求生成**可直接导入**的 Dify 工作流 DSL（YAML / JSON），覆盖 DSL `0.6.0`（Dify 1.15.x）与 `0.7.0`（Dify 1.16.x）。
 
@@ -8,33 +8,36 @@
 2. **连线语义**——分支句柄（`cases[].id` / `classes[].id` / `user_actions[].id` / `__timeout`）逐字匹配；
 3. **引用合法**——选择器根节点存在、模板里 `{{#node.field#}}` 的节点 id 不含连字符。
 
+> 本文面向维护者。技能包只包含 `skills/dify-workflow-dsl/` 下的运行时资产；测试与本文档不随技能安装。
+
 ## 目录结构
 
 ```
-SKILL.md                    技能入口：版本策略、节点路由、硬规则、交付规范
-references/
-  dsl-format.md             顶层结构、节点 wrapper、变量与选择器、dependencies
-  edge-and-layout.md        边、分支句柄、坐标与容器布局
-  version-deltas.md         0.6.0 ↔ 0.7.0 差异与迁移清单
-  nodes/*.md                21 个节点的字段表、最小示例、导入失败原因
-  templates/*.yml           4 个可直接改的骨架
-examples/*.dify.yml         5 个完整可导入样例
-scripts/validate_dsl.py     静态校验器（版本/节点/边/选择器/容器/可达性/依赖）
-tests/                      校验器回归测试与正反夹具
+skills/dify-workflow-dsl/   技能包（安装时整个目录复制）
+  SKILL.md                  技能入口：版本策略、节点路由、硬规则、交付规范
+  references/
+    dsl-format.md           顶层结构、节点 wrapper、变量与选择器、dependencies
+    edge-and-layout.md      边、分支句柄、坐标与容器布局
+    version-deltas.md       0.6.0 ↔ 0.7.0 差异与迁移清单
+    nodes/*.md              21 个节点的字段表、最小示例、导入失败原因
+    templates/*.yml         4 个可直接改的骨架
+  examples/*.dify.yml       5 个完整可导入样例
+  scripts/validate_dsl.py   静态校验器（版本/节点/边/选择器/容器/可达性/依赖）
+
+tests/                      校验器回归测试与正反夹具（开发期，不随技能安装）
+docs/dify-workflow-dsl.md   本文件（维护者文档，不随技能安装）
 ```
 
 ## 快速开始
 
-> 以下命令在本目录内执行。
-
 ```bash
-# 校验一个 DSL 文件
+# 在 skills/dify-workflow-dsl/ 内校验一个 DSL 文件
 python scripts/validate_dsl.py app.dify.yml
 
 # 指定版本 + 严格模式
 python scripts/validate_dsl.py --strict --target-version 0.7.0 app.dify.yml
 
-# 跑回归测试
+# 在仓库根目录跑回归测试
 python -m unittest discover -s tests -v
 ```
 
@@ -57,15 +60,15 @@ WARN 与 ERROR 分开：`--strict` 把 WARN 也计为失败。少数 WARN 是有
 
 ## 安装
 
-本目录是自包含的单技能包（顶层有 `SKILL.md`），把整个目录复制到目标工具的技能目录即可：
+`skills/dify-workflow-dsl/` 是自包含的运行时技能包（顶层有 `SKILL.md`），把整个目录复制到目标工具的技能目录即可，或使用仓库根目录的 `install.sh` / `install.ps1`。`tests/` 与本文档在技能包之外，不会被安装。
 
 ```bash
-cp -R dify-workflow-dsl <目标工具的技能目录>/
+cp -R skills/dify-workflow-dsl <目标工具的技能目录>/
 ```
 
-复制后应存在 `<技能目录>/dify-workflow-dsl/SKILL.md`。目录内所有相对路径（`references/`、`examples/`、`scripts/`、`tests/`）都以本目录为基准，整体搬移不影响引用；目录名保持为 `dify-workflow-dsl`，与 `SKILL.md` 里的 `name` 一致。
+复制后应存在 `<技能目录>/dify-workflow-dsl/SKILL.md`。目录内所有相对路径（`references/`、`examples/`、`scripts/`）都以技能目录为基准，整体搬移不影响引用；目录名保持为 `dify-workflow-dsl`，与 `SKILL.md` 里的 `name` 一致。
 
-运行只依赖 Python 3.9+ 与 PyYAML，不需要本目录之外的任何文件。
+运行只依赖 Python 3.9+ 与 PyYAML，不需要技能目录之外的任何文件。
 
 ## 已知边界
 
