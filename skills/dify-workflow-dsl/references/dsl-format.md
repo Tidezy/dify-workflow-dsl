@@ -101,6 +101,15 @@ Agent 模式**没有 `workflow` 段**。不要把它和"workflow 里放一个 Ag
 
 `features` 在不同版本导出的键不完全一致，缺失的键会被当成默认值。**不要臆造 `features` 子键**——写不确定的键比不写更容易触发导入校验失败。
 
+### 环境变量：`secret` 的值不会随导入落地
+
+`environment_variables[].value_type` 支持 `string` / `number` / `secret`。注意两点：
+
+- **`secret` 的值在导出与导入时都会被清空**。想在交付包里预置一个可用的值（测试环境常见），
+  必须用 `string`；用 `secret` 导入后一定是空的，运行时取到空字符串。
+- 生产环境反过来：token 用 `secret`，导入后由使用者手工填，避免明文进版本库。
+- 节点内引用一律 `["env", KEY]` / `{{#env.KEY#}}`，与 `value_type` 无关。
+
 ## 节点 wrapper
 
 顶层节点：

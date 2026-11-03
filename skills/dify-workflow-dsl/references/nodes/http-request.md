@@ -116,3 +116,42 @@
 - `method` 写成大写 `GET`：导出与校验按小写比对，保持小写最稳。
 - `headers` / `params` 用了 YAML 列表形式，这两个字段要求 `key: value` 的换行字符串。
 - `timeout` 写成 `max_connect_timeout` 之类边界字段而缺 `connect` / `read` / `write`，导入后超时被重置。
+- **缺 `authorization`**：该字段是 pydantic 必填项，无鉴权也要写 `{type: no-auth}`，否则导入报
+  `1 validation error for HttpRequestNodeData: authorization field required`。
+- **`headers` 写成 YAML 双引号多行**：换行会被折叠成空格，两个 key 挤进同一行，YAML 合法但导入失败。
+  要换行必须用转义：`"Content-Type: application/json\nPRIVATE-TOKEN: {{#env.TOKEN#}}"`。
+- **把 token 塞进鉴权字段**：见下节，运行期拿不到值。
+
+## 鉴权：token 放 headers，别用「API-Key」字段
+
+`authorization.type: api-key` 的 `config.api_key` **不做变量替换**。写
+`api_key: "{{#env.GITLAB_TOKEN#}}"` 时，编辑器里会显示成蓝色变量 chip，看起来正常，
+但运行期渲染结果是空字符串，报：
+
+```
+API key is required for authorization but was empty. Please provide a valid API key.
+```
+
+正确做法是保留 `authorization: {type: no-auth}`，把 token 放进 `headers`——headers 走标准变量替换：
+
+```yaml
+  headers: "PRIVATE-TOKEN: {{#env.GITLAB_TOKEN#}}"
+  authorization:
+    type: no-auth
+```
+
+## 内网地址：SSRF 保护
+
+Dify 的 HTTP 节点全部经内置 Squid（`ssrf_proxy`）出站，**默认禁止访问私有网段**
+（`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`）。调内网服务会报：
+
+```
+Access to 'http://192.168.1.10:8080/...' was blocked by SSRF protection
+```
+
+这不是 DSL 问题，要在 Dify 部署目录的 `.env` 里放行，然后 **重建 `ssrf_proxy` 容器**：
+
+```bash
+SSRF_PROXY_ALLOW_PRIVATE_IPS=192.168.0.0/16
+docker compose up -d
+```

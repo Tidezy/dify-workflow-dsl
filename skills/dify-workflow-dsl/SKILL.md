@@ -25,8 +25,11 @@ compatibility: Requires Python 3.9+ and PyYAML.
 1. **判断模式**：一次性/批量/接口型 → `workflow`；多轮对话 → `advanced-chat`；独立可对话的 Agent 应用 → `agent`（仅 0.7.0）。拿不准时问一句，不要猜。
 2. **列节点清单**：按下方路由表把需求映射成节点序列，先写出 `start → … → end/answer` 的骨架，再填细节。
 3. **查节点字段**：每个节点读对应的 `references/nodes/*.md`，字段名逐字照抄，不要凭记忆写。
-4. **写 YAML**：节点 id 用字符串（建议 `n_start`、`n_llm` 这类下划线风格），边按 `{source}-{handle}-{target}-target` 命名。
+4. **写 YAML**：节点 id 用 13 位数字串（与 Dify 真实导出一致，如 `1770000000010`；语义化 id 便于阅读，但交付前应换成数字），边按 `{source}-{handle}-{target}-target` 命名。
 5. **跑校验**：`python scripts/validate_dsl.py --strict --target-version <版本> <文件>`，把 ERROR 全部修掉；WARN 要么修，要么在回复里说明为什么可接受。
+   同一轮里**把本次改动过的字段单独打印一次解析后的值**（`yaml.safe_load` 之后 `repr()`），确认它不是你以为的样子——
+   典型翻车是 `headers` 被 YAML 折叠成空格、数字型 id 被解析成 int，这两类校验器未必拦得住全部变体。
+   改已有文件时优先**定点编辑**，不要整份覆写：整份重写会把所有已验证字段重新冒一次险。
 6. **生成交付清单**：`python scripts/deliver_checklist.py <文件>`，把「导入后还要在目标工作区补什么」列成待办，不要靠回忆。
 7. **交付**：给出文件路径 + 版本 + 校验结果 + 清单里尚未完成的项。
 
@@ -66,6 +69,9 @@ compatibility: Requires Python 3.9+ and PyYAML.
 7. **插件必须进 `dependencies`**，`marketplace_plugin_unique_identifier` 只能从真实导出复制，不许自己拼。
 8. **模型名要真实**：`model.provider` 三段式、`model.name` 用该供应商实际提供的名称，编造名会在运行期报 provider 校验失败。
 9. **只能引用真实存在的输出字段**：`["node", "field"]` 与 `{{#node.field#}}` 都算；字段不存在时导入不报错、运行期取到空值。各节点的输出字段见对应 `references/nodes/*.md` 的「数据流」小节。
+10. **多个 `end` 节点的输出变量名必须全局唯一**。工作流的输出是一张扁平表，两个 End 都用 `decision` 会在发布检查里被拒（`输出节点变量重复`）。分支之间用前缀区分，如 `ok_result` / `back_result`。
+11. **`http-request.authorization` 是必填字段**，无鉴权也要写 `{type: no-auth}`；缺了导入报 `authorization field required`。另外「鉴权 → API-Key」字段**不做变量替换**，把 `{{#env.TOKEN#}}` 写进去运行期会得到空值并报 `API key is required ... but was empty`——token 一律放 `headers`。
+12. **`headers` / `params` 必须是「每行一个 `key: value`」的字符串**。写成 YAML 双引号多行会被折叠成空格，两个 key 挤一行，YAML 合法但导入失败。要换行就写 `"a: 1\nb: 2"` 的转义形式。
 
 ## 模板
 
@@ -95,7 +101,7 @@ python scripts/validate_dsl.py --format json examples/*.yml
 
 依赖 Python 3.9+ 与 PyYAML；缺失时先安装 PyYAML。
 
-校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点与**字段级引用**（引用不存在的输出、未声明的 `env` / `conversation` 变量）、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
+校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点与**字段级引用**（引用不存在的输出、未声明的 `env` / `conversation` 变量）、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖；以及一批「YAML 合法但 Dify 不认」的坑：**跨 End 输出变量重名**、**`http-request` 缺 `authorization`**、**`headers`/`params` 被折叠成一行**、**`code` 的 `main` 形参与 `variables` 不一致**、**文件带 BOM / CRLF**、**节点 id 非 13 位数字**。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
 
 ## 交付清单
 
@@ -107,6 +113,11 @@ python scripts/deliver_checklist.py app.dify.yml --format json
 ```
 
 交付时把清单里没完成的部分原样告诉用户，不要只说"已生成，导入即可"。
+
+另外两类**只有运行才会暴露**的问题，交付时必须主动提醒：
+
+- **内网地址被 SSRF 拦**：HTTP 节点默认禁止访问私有网段，需在 Dify `.env` 设 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 并重建 `ssrf_proxy` 容器。
+- **工作区没有指定模型**：`model.provider` / `model.name` 必须在该实例已安装，否则运行期报 provider 校验失败。DSL 里只是占位，交付时明确要求使用者确认或替换。
 
 ## 输出规范
 

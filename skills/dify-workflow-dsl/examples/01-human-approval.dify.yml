@@ -15,7 +15,7 @@ workflow:
   features: {}
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -32,7 +32,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 90
-      - id: n_human
+      - id: "1770000000020"
         type: custom
         data:
           type: human-input
@@ -41,7 +41,7 @@ workflow:
             - id: webapp
               type: webapp
               enabled: true
-          form_content: "请复核以下内容：\n\n{{#n_start.proposal#}}"
+          form_content: "请复核以下内容：\n\n{{#1770000000010.proposal#}}"
           inputs:
             - type: paragraph
               output_variable_name: comment
@@ -77,20 +77,20 @@ workflow:
         targetPosition: left
         width: 280
         height: 210
-      - id: n_end_ok
+      - id: "1770000000030"
         type: custom
         data:
           type: end
           title: "审批通过"
           outputs:
             - variable: decision
-              value_selector: ["n_human", "__action_id"]
+              value_selector: ["1770000000020", "__action_id"]
               value_type: string
             - variable: comment
-              value_selector: ["n_human", "comment"]
+              value_selector: ["1770000000020", "comment"]
               value_type: string
             - variable: risk_level
-              value_selector: ["n_human", "risk_level"]
+              value_selector: ["1770000000020", "risk_level"]
               value_type: string
         position: {x: 730, y: 190}
         positionAbsolute: {x: 730, y: 190}
@@ -98,17 +98,17 @@ workflow:
         targetPosition: left
         width: 244
         height: 120
-      - id: n_end_back
+      - id: "1770000000040"
         type: custom
         data:
           type: end
           title: "超时或退回"
           outputs:
-            - variable: decision
-              value_selector: ["n_human", "__action_id"]
+            - variable: fallback_decision
+              value_selector: ["1770000000020", "__action_id"]
               value_type: string
-            - variable: comment
-              value_selector: ["n_human", "comment"]
+            - variable: fallback_comment
+              value_selector: ["1770000000020", "comment"]
               value_type: string
         position: {x: 730, y: 430}
         positionAbsolute: {x: 730, y: 430}
@@ -117,34 +117,34 @@ workflow:
         width: 244
         height: 120
     edges:
-      - id: n_start-source-n_human-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_human
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: human-input, isInIteration: false, isInLoop: false}
-      - id: n_human-approve-n_end_ok-target
-        source: n_human
+      - id: 1770000000020-approve-1770000000030-target
+        source: "1770000000020"
         sourceHandle: approve
-        target: n_end_ok
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
-      - id: n_human-reject-n_end_back-target
-        source: n_human
+      - id: 1770000000020-reject-1770000000040-target
+        source: "1770000000020"
         sourceHandle: reject
-        target: n_end_back
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: human-input, targetType: end, isInIteration: false, isInLoop: false}
-      - id: n_human-__timeout-n_end_back-target
-        source: n_human
+      - id: 1770000000020-__timeout-1770000000040-target
+        source: "1770000000020"
         sourceHandle: "__timeout"
-        target: n_end_back
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 0

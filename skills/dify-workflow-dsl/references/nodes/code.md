@@ -96,6 +96,8 @@
 
 - `outputs` 写成了数组（`- result:` 形式），它必须是键值映射。
 - `code` 里函数名不是 `main`，或把逻辑写在模块顶层 / `if __name__ == "__main__"` 里。
+- `def main(...)` 的形参名与 `variables[].variable` 对不上（顺序也要一致）。运行期按形参名取值，
+  对不上不报错、直接拿到空值——校验器会报 `code.signature`。
 - 返回 dict 的键与 `outputs` 声明的键不一致，运行期取不到值。
 - `code_language` 仍写成 `json`（早期 0.6.0 文档的写法），应改为 `python3` 加 `json.loads`。
 - `variables[].value_selector` 为空数组，或指向了上游并不存在的输出键。

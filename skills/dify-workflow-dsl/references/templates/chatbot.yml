@@ -30,7 +30,7 @@ workflow:
       enabled: false
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -42,7 +42,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 54
-      - id: n_llm
+      - id: "1770000000020"
         type: custom
         data:
           type: llm
@@ -80,12 +80,12 @@ workflow:
         targetPosition: left
         width: 244
         height: 98
-      - id: n_answer
+      - id: "1770000000030"
         type: custom
         data:
           type: answer
           title: "回复"
-          answer: "{{#n_llm.text#}}"
+          answer: "{{#1770000000020.text#}}"
           variables: []
         position: {x: 680, y: 282}
         positionAbsolute: {x: 680, y: 282}
@@ -94,10 +94,10 @@ workflow:
         width: 244
         height: 110
     edges:
-      - id: n_start-source-n_llm-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_llm
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
@@ -106,10 +106,10 @@ workflow:
           targetType: llm
           isInIteration: false
           isInLoop: false
-      - id: n_llm-source-n_answer-target
-        source: n_llm
+      - id: 1770000000020-source-1770000000030-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_answer
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0

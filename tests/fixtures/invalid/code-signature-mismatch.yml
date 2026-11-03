@@ -1,0 +1,80 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：code 节点形参与 variables 不一致"
+  mode: workflow
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: "1770000000001"
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables:
+            - label: "输入"
+              variable: q
+              type: text-input
+              required: true
+        position: {x: 80, y: 282}
+        width: 244
+        height: 90
+      - id: "1770000000002"
+        type: custom
+        data:
+          type: code
+          title: "处理"
+          code_language: python3
+          code: |
+            def main(source: str) -> dict:
+                return {"out": (source or "").upper()}
+          variables:
+            - variable: q
+              value_selector: ["1770000000001", "q"]
+              value_type: string
+          outputs:
+            out:
+              type: string
+              children: null
+          selected: false
+        position: {x: 380, y: 282}
+        width: 244
+        height: 90
+      - id: "1770000000003"
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: out
+              value_selector: ["1770000000002", "out"]
+              value_type: string
+        position: {x: 680, y: 282}
+        width: 244
+        height: 90
+    edges:
+      - id: 1770000000001-source-1770000000002-target
+        source: "1770000000001"
+        sourceHandle: source
+        target: "1770000000002"
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: code}
+      - id: 1770000000002-source-1770000000003-target
+        source: "1770000000002"
+        sourceHandle: source
+        target: "1770000000003"
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: code, targetType: end}
+    viewport: {x: 0, y: 0, zoom: 0.7}

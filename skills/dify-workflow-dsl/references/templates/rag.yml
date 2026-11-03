@@ -29,7 +29,7 @@ workflow:
       enabled: false
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -41,7 +41,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 54
-      - id: n_kb
+      - id: "1770000000020"
         type: custom
         data:
           type: knowledge-retrieval
@@ -63,7 +63,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 96
-      - id: n_llm
+      - id: "1770000000030"
         type: custom
         data:
           type: llm
@@ -83,7 +83,7 @@ workflow:
               text: "{{#sys.query#}}"
           context:
             enabled: true
-            variable_selector: ["n_kb", "result"]
+            variable_selector: ["1770000000020", "result"]
           memory:
             query_prompt_template: "{{#sys.query#}}"
             role_prefix:
@@ -101,12 +101,12 @@ workflow:
         targetPosition: left
         width: 244
         height: 98
-      - id: n_answer
+      - id: "1770000000040"
         type: custom
         data:
           type: answer
           title: "回复"
-          answer: "{{#n_llm.text#}}"
+          answer: "{{#1770000000030.text#}}"
           variables: []
         position: {x: 980, y: 282}
         positionAbsolute: {x: 980, y: 282}
@@ -115,26 +115,26 @@ workflow:
         width: 244
         height: 110
     edges:
-      - id: n_start-source-n_kb-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_kb
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: knowledge-retrieval, isInIteration: false, isInLoop: false}
-      - id: n_kb-source-n_llm-target
-        source: n_kb
+      - id: 1770000000020-source-1770000000030-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_llm
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: knowledge-retrieval, targetType: llm, isInIteration: false, isInLoop: false}
-      - id: n_llm-source-n_answer-target
-        source: n_llm
+      - id: 1770000000030-source-1770000000040-target
+        source: "1770000000030"
         sourceHandle: source
-        target: n_answer
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 0

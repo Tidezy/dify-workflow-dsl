@@ -29,7 +29,7 @@ workflow:
       enabled: false
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -41,7 +41,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 54
-      - id: n_cls
+      - id: "1770000000020"
         type: custom
         data:
           type: question-classifier
@@ -68,7 +68,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 120
-      - id: n_llm_tech
+      - id: "1770000000030"
         type: custom
         data:
           type: llm
@@ -106,7 +106,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 98
-      - id: n_llm_billing
+      - id: "1770000000040"
         type: custom
         data:
           type: llm
@@ -144,15 +144,15 @@ workflow:
         targetPosition: left
         width: 244
         height: 98
-      - id: n_agg
+      - id: "1770000000050"
         type: custom
         data:
           type: variable-aggregator
           title: "合并分支"
           output_type: string
           variables:
-            - ["n_llm_tech", "text"]
-            - ["n_llm_billing", "text"]
+            - ["1770000000030", "text"]
+            - ["1770000000040", "text"]
           selected: false
         position: {x: 1020, y: 300}
         positionAbsolute: {x: 1020, y: 300}
@@ -160,12 +160,12 @@ workflow:
         targetPosition: left
         width: 244
         height: 90
-      - id: n_answer
+      - id: "1770000000060"
         type: custom
         data:
           type: answer
           title: "回复"
-          answer: "{{#n_agg.output#}}"
+          answer: "{{#1770000000050.output#}}"
           variables: []
         position: {x: 1320, y: 300}
         positionAbsolute: {x: 1320, y: 300}
@@ -174,50 +174,50 @@ workflow:
         width: 244
         height: 110
     edges:
-      - id: n_start-source-n_cls-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_cls
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: question-classifier, isInIteration: false, isInLoop: false}
-      - id: n_cls-tech-n_llm_tech-target
-        source: n_cls
+      - id: 1770000000020-tech-1770000000030-target
+        source: "1770000000020"
         sourceHandle: "tech"
-        target: n_llm_tech
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: question-classifier, targetType: llm, isInIteration: false, isInLoop: false}
-      - id: n_cls-billing-n_llm_billing-target
-        source: n_cls
+      - id: 1770000000020-billing-1770000000040-target
+        source: "1770000000020"
         sourceHandle: "billing"
-        target: n_llm_billing
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: question-classifier, targetType: llm, isInIteration: false, isInLoop: false}
-      - id: n_llm_tech-source-n_agg-target
-        source: n_llm_tech
+      - id: 1770000000030-source-1770000000050-target
+        source: "1770000000030"
         sourceHandle: source
-        target: n_agg
+        target: "1770000000050"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: llm, targetType: variable-aggregator, isInIteration: false, isInLoop: false}
-      - id: n_llm_billing-source-n_agg-target
-        source: n_llm_billing
+      - id: 1770000000040-source-1770000000050-target
+        source: "1770000000040"
         sourceHandle: source
-        target: n_agg
+        target: "1770000000050"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: llm, targetType: variable-aggregator, isInIteration: false, isInLoop: false}
-      - id: n_agg-source-n_answer-target
-        source: n_agg
+      - id: 1770000000050-source-1770000000060-target
+        source: "1770000000050"
         sourceHandle: source
-        target: n_answer
+        target: "1770000000060"
         targetHandle: target
         type: custom
         zIndex: 0

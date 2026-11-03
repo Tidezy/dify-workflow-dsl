@@ -42,7 +42,7 @@ workflow:
   features: {}
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -59,7 +59,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 90
-      - id: n_agent
+      - id: "1770000000020"
         type: custom
         data:
           type: agent
@@ -74,7 +74,7 @@ workflow:
             mode: tell_agent_what_to_do
             workflow_prompt: "完成用户给出的任务，输出结论与关键依据。"
             previous_node_output_refs:
-              - selector: ["n_start", "task"]
+              - selector: ["1770000000010", "task"]
             declared_outputs:
               - name: result
                 type: string
@@ -89,14 +89,14 @@ workflow:
         targetPosition: left
         width: 270
         height: 180
-      - id: n_end
+      - id: "1770000000030"
         type: custom
         data:
           type: end
           title: "输出"
           outputs:
             - variable: result
-              value_selector: ["n_agent", "result"]
+              value_selector: ["1770000000020", "result"]
               value_type: string
         position: {x: 720, y: 282}
         positionAbsolute: {x: 720, y: 282}
@@ -105,18 +105,18 @@ workflow:
         width: 244
         height: 90
     edges:
-      - id: n_start-source-n_agent-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_agent
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: agent, isInIteration: false, isInLoop: false}
-      - id: n_agent-source-n_end-target
-        source: n_agent
+      - id: 1770000000020-source-1770000000030-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_end
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0

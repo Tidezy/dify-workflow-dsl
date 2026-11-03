@@ -1,0 +1,75 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：HTTP 节点缺 authorization"
+  mode: workflow
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: "1770000000001"
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables:
+            - label: "输入"
+              variable: q
+              type: text-input
+              required: true
+        position: {x: 80, y: 282}
+        width: 244
+        height: 90
+      - id: "1770000000002"
+        type: custom
+        data:
+          type: http-request
+          title: "调接口"
+          method: get
+          url: "http://example.com/api"
+          headers: ""
+          params: ""
+          body:
+            type: none
+            data: []
+          selected: false
+        position: {x: 380, y: 282}
+        width: 244
+        height: 90
+      - id: "1770000000003"
+        type: custom
+        data:
+          type: end
+          title: "输出"
+          outputs:
+            - variable: body
+              value_selector: ["1770000000002", "body"]
+              value_type: string
+        position: {x: 680, y: 282}
+        width: 244
+        height: 90
+    edges:
+      - id: 1770000000001-source-1770000000002-target
+        source: "1770000000001"
+        sourceHandle: source
+        target: "1770000000002"
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: http-request}
+      - id: 1770000000002-source-1770000000003-target
+        source: "1770000000002"
+        sourceHandle: source
+        target: "1770000000003"
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: http-request, targetType: end}
+    viewport: {x: 0, y: 0, zoom: 0.7}

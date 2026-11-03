@@ -15,7 +15,7 @@ workflow:
   features: {}
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -27,7 +27,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 54
-      - id: n_loop
+      - id: "1770000000020"
         type: custom
         data:
           type: loop
@@ -42,11 +42,11 @@ workflow:
               var_type: number
           break_conditions:
             - id: enough_reviews
-              variable_selector: ["n_loop", "review_count"]
+              variable_selector: ["1770000000020", "review_count"]
               comparison_operator: "≥"
               value: "3"
               varType: number
-          start_node_id: n_loop_start
+          start_node_id: "1770000000030"
           width: 520
           height: 210
         position: {x: 350, y: 250}
@@ -56,8 +56,8 @@ workflow:
         width: 520
         height: 210
         zIndex: 1
-      - id: n_loop_start
-        parentId: n_loop
+      - id: "1770000000030"
+        parentId: "1770000000020"
         type: custom-loop-start
         draggable: false
         selectable: false
@@ -72,8 +72,8 @@ workflow:
         width: 44
         height: 48
         zIndex: 1002
-      - id: n_inc
-        parentId: n_loop
+      - id: "1770000000040"
+        parentId: "1770000000020"
         type: custom
         data:
           type: assigner
@@ -81,9 +81,9 @@ workflow:
           version: "2"
           isInIteration: false
           isInLoop: true
-          loop_id: n_loop
+          loop_id: 1770000000020
           items:
-            - variable_selector: ["n_loop", "review_count"]
+            - variable_selector: ["1770000000020", "review_count"]
               input_type: constant
               operation: "+="
               value: 1
@@ -96,14 +96,14 @@ workflow:
         width: 244
         height: 86
         zIndex: 1002
-      - id: n_end
+      - id: "1770000000050"
         type: custom
         data:
           type: end
           title: "输出检查次数"
           outputs:
             - variable: review_count
-              value_selector: ["n_loop", "review_count"]
+              value_selector: ["1770000000020", "review_count"]
               value_type: number
         position: {x: 940, y: 280}
         positionAbsolute: {x: 940, y: 280}
@@ -112,18 +112,18 @@ workflow:
         width: 244
         height: 90
     edges:
-      - id: n_start-source-n_loop-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_loop
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: loop, isInIteration: false, isInLoop: false}
-      - id: n_loop_start-source-n_inc-target
-        source: n_loop_start
+      - id: 1770000000030-source-1770000000040-target
+        source: "1770000000030"
         sourceHandle: source
-        target: n_inc
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 1002
@@ -132,11 +132,11 @@ workflow:
           targetType: assigner
           isInIteration: false
           isInLoop: true
-          loop_id: n_loop
-      - id: n_loop-source-n_end-target
-        source: n_loop
+          loop_id: 1770000000020
+      - id: 1770000000020-source-1770000000050-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_end
+        target: "1770000000050"
         targetHandle: target
         type: custom
         zIndex: 0

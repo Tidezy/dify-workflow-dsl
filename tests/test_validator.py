@@ -55,6 +55,10 @@ class InvalidFixtures(unittest.TestCase):
         "llm-missing-context.yml": "llm.context",
         "template-hyphen-id.yml": "template.node-id",
         "agent-package-dangling.yml": "agent.v2-package-dangling",
+        "end-output-duplicate.yml": "end.output-duplicate",
+        "http-missing-authorization.yml": "http.authorization",
+        "http-headers-folded.yml": "http.kv-folded",
+        "code-signature-mismatch.yml": "code.signature",
     }
 
     def test_invalid_fixtures_are_caught(self):

@@ -64,6 +64,8 @@ SELECTOR_KEYS = {
 ROOT_SELECTORS = {"sys", "env", "conversation"}
 TEMPLATE_RE = re.compile(r"\{\{#([^#{}]*)#\}\}")
 NODE_ID_RE = re.compile(r"^[A-Za-z0-9_]{1,50}$")
+# headers / params 里形如 `Key:` 的 token，用于识别「一行多个 key」的折叠事故
+KV_KEY_RE = re.compile(r"([A-Za-z0-9_\-$]+)\s*:")
 
 # 各节点类型的固定输出字段（见 references/nodes/*.md 的「数据流」小节）。
 # 下游用 ["node", "field"] 或 {{#node.field#}} 引用不存在的字段时，导入不报错、运行期取到空值，
@@ -267,6 +269,7 @@ def check_graph(doc: Dict[str, Any], rep: Report, mode: str) -> None:
 
     node_map, type_map = index_nodes(nodes, rep, doc)
     check_nodes(nodes, node_map, type_map, rep, mode, doc)
+    check_end_outputs_unique(nodes, rep)
     check_edges(edges, node_map, type_map, rep)
     check_entries_and_terminals(nodes, edges, node_map, type_map, rep, mode)
     check_reachability(nodes, edges, node_map, type_map, rep, mode)
@@ -297,6 +300,12 @@ def index_nodes(nodes: List[Any], rep: Report, doc: Dict[str, Any]) -> Tuple[Dic
         data = node.get("data")
         dtype = data.get("type") if isinstance(data, dict) else None
         type_map[nid] = dtype if isinstance(dtype, str) else ""
+        if not re.fullmatch(r"\d{13}", nid):
+            rep.warn(
+                "node.id-shape",
+                f"{where}.id={nid!r} 不是 13 位数字串。Dify 真实导出的节点 id 都是这种形态，"
+                f"非数字 id 在部分版本会导致画布渲染崩溃；语义化 id 适合人类阅读，但交付前建议改成数字",
+            )
         wrapper = node.get("type")
         if wrapper not in WRAPPER_TYPES:
             rep.error("node.wrapper-type", f"{where}.type={wrapper!r} 不合法，应为 {sorted(WRAPPER_TYPES)}")
@@ -365,10 +374,7 @@ def check_nodes(
         elif dtype == "tool":
             check_tool(data, label, rep)
         elif dtype == "http-request":
-            if not data.get("url"):
-                rep.warn("http.url-missing", f"{label} 缺少 url")
-            if not data.get("method"):
-                rep.error("http.method-missing", f"{label} 缺少 method")
+            check_http_request(data, label, rep)
         elif dtype == "knowledge-retrieval":
             datasets = data.get("dataset_ids")
             if not isinstance(datasets, list) or not datasets:
@@ -431,9 +437,86 @@ def check_code(data: Dict[str, Any], label: str, rep: Report) -> None:
         rep.error("code.empty", f"{label} 的 code 为空")
     elif lang == "python3" and not re.search(r"def\s+main\s*\(", code):
         rep.error("code.main-missing", f"{label} 是 python3 但找不到 def main(...)")
+    elif lang == "python3":
+        match = re.search(r"def\s+main\s*\((.*?)\)\s*(?:->\s*[^:]+)?:", code, re.S)
+        if match:
+            params = [
+                part.split(":")[0].split("=")[0].strip()
+                for part in match.group(1).split(",")
+                if part.strip()
+            ]
+            declared = [
+                v.get("variable")
+                for v in _as_list(data.get("variables"))
+                if isinstance(v, dict) and v.get("variable")
+            ]
+            if params and params != declared:
+                rep.error(
+                    "code.signature",
+                    f"{label} 的 def main 形参 {params} 与 variables 声明 {declared} 不一致；"
+                    f"运行期按形参名取值，对不上会拿到空值且不报错",
+                )
     outputs = data.get("outputs")
     if not isinstance(outputs, dict) or not outputs:
         rep.error("code.outputs", f"{label} 的 outputs 必须是非空映射（变量名 → {{type, children}}）")
+
+
+def _check_kv_block(value: Any, field: str, label: str, rep: Report) -> None:
+    """headers / params 必须是「每行一个 key: value」。
+
+    写成 YAML 双引号多行时，换行会被折叠成空格，两个 key 挤在一行——
+    YAML 合法、字段非空，导入却会失败，所以要在值层面查。
+    """
+    if not isinstance(value, str) or not value.strip():
+        return
+    for idx, line in enumerate(value.split("\n"), 1):
+        keys = KV_KEY_RE.findall(line)
+        if len(keys) > 1:
+            rep.error(
+                "http.kv-folded",
+                f"{label}.{field} 第 {idx} 行出现 {len(keys)} 个 key（{', '.join(keys)}）："
+                f"多行字符串被 YAML 折叠成了空格。改成 \"a: 1\\\\nb: 2\" 的转义写法",
+            )
+
+
+def check_http_request(data: Dict[str, Any], label: str, rep: Report) -> None:
+    if not data.get("url"):
+        rep.warn("http.url-missing", f"{label} 缺少 url")
+    method = data.get("method")
+    if not method:
+        rep.error("http.method-missing", f"{label} 缺少 method")
+    elif str(method) != str(method).lower():
+        rep.warn("http.method-case", f"{label}.method={method!r} 建议用小写")
+
+    auth = data.get("authorization")
+    if not isinstance(auth, dict):
+        rep.error(
+            "http.authorization",
+            f"{label} 缺少 authorization；该字段是必填项，无鉴权也要写 {{type: no-auth}}，"
+            f"否则导入报 'authorization field required'",
+        )
+    elif auth.get("type") == "api-key":
+        cfg = auth.get("config")
+        if not isinstance(cfg, dict) or not cfg.get("api_key"):
+            rep.error("http.api-key-empty", f"{label}.authorization.config.api_key 为空")
+        elif "{{#" in str(cfg.get("api_key")):
+            rep.warn(
+                "http.api-key-template",
+                f"{label} 把变量写进了鉴权字段。Dify 的 API-Key 字段**不做变量替换**，"
+                f"运行期会报 'API key is required ... but was empty'；token 应改放 headers",
+            )
+
+    _check_kv_block(data.get("headers"), "headers", label, rep)
+    _check_kv_block(data.get("params"), "params", label, rep)
+
+    body = data.get("body")
+    if not isinstance(body, dict):
+        rep.error("http.body", f"{label} 缺少 body；无请求体也要写 {{type: none, data: []}}")
+    else:
+        if not body.get("type"):
+            rep.error("http.body-type", f"{label}.body 缺少 type")
+        if not isinstance(body.get("data"), list):
+            rep.error("http.body-data", f"{label}.body.data 必须是数组（无条目写 []）")
 
 
 def check_if_else(data: Dict[str, Any], label: str, rep: Report) -> None:
@@ -453,10 +536,28 @@ def check_if_else(data: Dict[str, Any], label: str, rep: Report) -> None:
         cid = str(cid)
         if cid in seen:
             rep.error("ifelse.case-duplicate", f"{label} 的 case id 重复：{cid}")
+        if "-" in cid:
+            rep.warn(
+                "ifelse.case-id-hyphen",
+                f"{label} 的 case id {cid!r} 含连字符；边 id 按 '-' 切分反解，"
+                f"会让 sourceHandle 定位错位，建议改成 caseok 这类无连字符形式",
+            )
         seen.add(cid)
         conds = case.get("conditions")
         if not isinstance(conds, list) or not conds:
             rep.error("ifelse.conditions", f"{label}.cases[{i}]（{cid}）缺少 conditions")
+            continue
+        for j, cond in enumerate(conds):
+            if not isinstance(cond, dict):
+                continue
+            if cond.get("varType") in ("number", "integer") and isinstance(
+                cond.get("value"), (int, float)
+            ):
+                rep.warn(
+                    "ifelse.value-shape",
+                    f"{label}.cases[{i}].conditions[{j}] 的 varType 是数值但 value 写成了数字 "
+                    f"{cond.get('value')!r}；Dify 内部按字符串存储，建议写成 \"{cond.get('value')}\"",
+                )
 
 
 def check_classifier(data: Dict[str, Any], label: str, rep: Report) -> None:
@@ -683,6 +784,31 @@ def check_tool(data: Dict[str, Any], label: str, rep: Report) -> None:
         for key, value in params.items():
             if not isinstance(value, dict) or "type" not in value:
                 rep.error("tool.param-shape", f"{label}.tool_parameters.{key} 必须是 {{type, value}} 结构")
+
+
+def check_end_outputs_unique(nodes: List[Any], rep: Report) -> None:
+    """多个 End 节点的输出变量名必须全局唯一，否则 Dify 发布检查会拒绝。"""
+    owners: Dict[str, str] = {}
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        data = node.get("data") if isinstance(node.get("data"), dict) else {}
+        if data.get("type") != "end":
+            continue
+        for out in _as_list(data.get("outputs")):
+            if not isinstance(out, dict):
+                continue
+            var = out.get("variable")
+            if not var:
+                continue
+            if var in owners:
+                rep.error(
+                    "end.output-duplicate",
+                    f"End 输出变量 {var!r} 在 {owners[var]} 与 {_node_label(node)} 重复；"
+                    f"多个 End 之间输出变量名必须全局唯一，否则发布检查报「变量重复」",
+                )
+            else:
+                owners[var] = _node_label(node)
 
 
 def check_edges(
@@ -1047,10 +1173,21 @@ def check_dependencies(doc: Dict[str, Any], rep: Report) -> None:
 def validate_file(path: str, target_version: Optional[str]) -> Report:
     rep = Report(path)
     try:
-        with open(path, "r", encoding="utf-8") as fh:
-            doc = yaml.safe_load(fh)
+        with open(path, "rb") as fh:
+            raw = fh.read()
     except FileNotFoundError:
         rep.error("io.not-found", "文件不存在")
+        return rep
+
+    if raw.startswith(b"\xef\xbb\xbf"):
+        rep.warn("file.bom", "文件带 UTF-8 BOM，部分版本的导入解析会失败，建议另存为无 BOM")
+    if b"\r\n" in raw:
+        rep.warn("file.crlf", "文件是 CRLF 行尾，建议转成 LF（多平台工具链更稳）")
+
+    try:
+        doc = yaml.safe_load(raw.decode("utf-8-sig"))
+    except UnicodeDecodeError as exc:
+        rep.error("io.encoding", f"文件不是合法的 UTF-8：{exc}")
         return rep
     except yaml.YAMLError as exc:
         rep.error("yaml.parse", f"YAML 解析失败：{exc}")

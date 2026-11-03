@@ -27,7 +27,7 @@ workflow:
       enabled: false
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -49,7 +49,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 54
-      - id: n_llm
+      - id: "1770000000020"
         type: custom
         data:
           type: llm
@@ -66,7 +66,7 @@ workflow:
               text: "你是专业译者。只输出译文，不要解释。"
             - id: 1b9e3d5f-0002-4c00-9000-000000000002
               role: user
-              text: "把下面的文本翻译成 {{#n_start.target_language#}}：\n\n{{#n_start.source_text#}}"
+              text: "把下面的文本翻译成 {{#1770000000010.target_language#}}：\n\n{{#1770000000010.source_text#}}"
           context:
             enabled: false
             variable_selector: []
@@ -79,14 +79,14 @@ workflow:
         targetPosition: left
         width: 244
         height: 98
-      - id: n_end
+      - id: "1770000000030"
         type: custom
         data:
           type: end
           title: "输出"
           outputs:
             - variable: translated
-              value_selector: ["n_llm", "text"]
+              value_selector: ["1770000000020", "text"]
               value_type: string
         position: {x: 680, y: 282}
         positionAbsolute: {x: 680, y: 282}
@@ -95,18 +95,18 @@ workflow:
         width: 244
         height: 90
     edges:
-      - id: n_start-source-n_llm-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_llm
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: llm, isInIteration: false, isInLoop: false}
-      - id: n_llm-source-n_end-target
-        source: n_llm
+      - id: 1770000000020-source-1770000000030-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_end
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0

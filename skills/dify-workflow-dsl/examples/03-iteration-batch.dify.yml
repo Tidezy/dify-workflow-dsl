@@ -15,7 +15,7 @@ workflow:
   features: {}
   graph:
     nodes:
-      - id: n_start
+      - id: "1770000000010"
         type: custom
         data:
           type: start
@@ -32,7 +32,7 @@ workflow:
         targetPosition: left
         width: 244
         height: 90
-      - id: n_split
+      - id: "1770000000020"
         type: custom
         data:
           type: code
@@ -44,7 +44,7 @@ workflow:
                 return {"items": items}
           variables:
             - variable: lines
-              value_selector: ["n_start", "lines"]
+              value_selector: ["1770000000010", "lines"]
           outputs:
             items:
               type: array[string]
@@ -56,17 +56,17 @@ workflow:
         targetPosition: left
         width: 244
         height: 110
-      - id: n_iter
+      - id: "1770000000030"
         type: custom
         data:
           type: iteration
           title: "逐条摘要"
-          iterator_selector: ["n_split", "items"]
-          output_selector: ["n_item_llm", "text"]
+          iterator_selector: ["1770000000020", "items"]
+          output_selector: ["1770000000040", "text"]
           output_type: array[string]
           is_parallel: false
           parallel_nums: 10
-          start_node_id: n_iter_start
+          start_node_id: "1770000000050"
           width: 620
           height: 200
         position: {x: 640, y: 270}
@@ -76,8 +76,8 @@ workflow:
         width: 620
         height: 200
         zIndex: 1
-      - id: n_iter_start
-        parentId: n_iter
+      - id: "1770000000050"
+        parentId: "1770000000030"
         type: custom-iteration-start
         draggable: false
         selectable: false
@@ -92,14 +92,14 @@ workflow:
         width: 44
         height: 48
         zIndex: 1002
-      - id: n_item_llm
-        parentId: n_iter
+      - id: "1770000000040"
+        parentId: "1770000000030"
         type: custom
         data:
           type: llm
           title: "单条摘要"
           isInIteration: true
-          iteration_id: n_iter
+          iteration_id: 1770000000030
           model:
             provider: langgenius/openai/openai
             name: gpt-4o-mini
@@ -112,7 +112,7 @@ workflow:
               text: "用一句中文概括给定内容，不超过 30 字。"
             - id: 5c1f7a90-0002-4d00-9000-000000000002
               role: user
-              text: "{{#n_iter.item#}}"
+              text: "{{#1770000000030.item#}}"
           context:
             enabled: false
             variable_selector: []
@@ -126,14 +126,14 @@ workflow:
         width: 244
         height: 98
         zIndex: 1002
-      - id: n_end
+      - id: "1770000000060"
         type: custom
         data:
           type: end
           title: "输出摘要数组"
           outputs:
             - variable: summaries
-              value_selector: ["n_iter", "output"]
+              value_selector: ["1770000000030", "output"]
               value_type: array[string]
         position: {x: 1310, y: 300}
         positionAbsolute: {x: 1310, y: 300}
@@ -142,26 +142,26 @@ workflow:
         width: 244
         height: 90
     edges:
-      - id: n_start-source-n_split-target
-        source: n_start
+      - id: 1770000000010-source-1770000000020-target
+        source: "1770000000010"
         sourceHandle: source
-        target: n_split
+        target: "1770000000020"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: start, targetType: code, isInIteration: false, isInLoop: false}
-      - id: n_split-source-n_iter-target
-        source: n_split
+      - id: 1770000000020-source-1770000000030-target
+        source: "1770000000020"
         sourceHandle: source
-        target: n_iter
+        target: "1770000000030"
         targetHandle: target
         type: custom
         zIndex: 0
         data: {sourceType: code, targetType: iteration, isInIteration: false, isInLoop: false}
-      - id: n_iter_start-source-n_item_llm-target
-        source: n_iter_start
+      - id: 1770000000050-source-1770000000040-target
+        source: "1770000000050"
         sourceHandle: source
-        target: n_item_llm
+        target: "1770000000040"
         targetHandle: target
         type: custom
         zIndex: 1002
@@ -170,11 +170,11 @@ workflow:
           targetType: llm
           isInIteration: true
           isInLoop: false
-          iteration_id: n_iter
-      - id: n_iter-source-n_end-target
-        source: n_iter
+          iteration_id: 1770000000030
+      - id: 1770000000030-source-1770000000060-target
+        source: "1770000000030"
         sourceHandle: source
-        target: n_end
+        target: "1770000000060"
         targetHandle: target
         type: custom
         zIndex: 0

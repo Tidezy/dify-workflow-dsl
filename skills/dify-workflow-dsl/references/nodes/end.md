@@ -67,6 +67,11 @@
 
 每条分支可以有自己的 `end`，返回不同字段集合；需要统一结构时先经 `variable-aggregator` 汇总。
 
+> ⚠️ **多个 `end` 之间，`outputs[].variable` 必须全局唯一。**
+> 工作流的输出是一张扁平表，不是按分支隔离的。两个 End 都写 `decision`，导入能过，
+> 但**发布会失败**：`输出节点变量 decision 重复`。
+> 分支间用前缀区分：`ok_decision` / `back_decision`、`success_url` / `failure_reason`。
+
 ```yaml
 - id: end_approved
   type: custom
@@ -74,10 +79,22 @@
     type: end
     title: "审批通过"
     outputs:
-      - variable: decision
+      - variable: approve_decision
         value_selector: [human_review, __action_id]
         value_type: string
   position: {x: 730, y: 190}
+  width: 244
+  height: 120
+- id: end_rejected
+  type: custom
+  data:
+    type: end
+    title: "退回"
+    outputs:
+      - variable: reject_decision
+        value_selector: [human_review, __action_id]
+        value_type: string
+  position: {x: 730, y: 430}
   width: 244
   height: 120
 ```
@@ -110,6 +127,7 @@
 4. 把 `end` 放进 `iteration` / `loop`（容器内禁止 `end`）。
 5. 给 `end` 再接出边，或把 `end` 写在分支里但整条分支从入口不可达，导致「终端不可达」校验失败。
 6. 在 `advanced-chat` 里用 `end` 收口，导入不报错但对话前端看不到流式回复。
+7. **多个 `end` 之间 `outputs[].variable` 重名**——导入不报错，卡在发布检查：`输出节点变量 xxx 重复`。校验器会报 `end.output-duplicate`。
 
 ## 终止方式对比
 
