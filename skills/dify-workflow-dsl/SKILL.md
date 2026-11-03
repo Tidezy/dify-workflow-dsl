@@ -1,6 +1,6 @@
 ---
 name: dify-workflow-dsl
-description: 从自然语言需求生成可直接导入 Dify 的工作流 DSL（YAML/JSON），支持 DSL 0.6.0（Dify 1.15.x）与 0.7.0（Dify 1.16.x）。用于新建 Dify 工作流/对话流/Agent 应用、改造已有 DSL、排查导入失败、补 Human Input / Loop / Iteration / Agent v2 节点结构。当用户提到 Dify、工作流 DSL、chatflow、导入报错、workflow.yml 时使用。
+description: 从自然语言需求生成可直接导入 Dify 的工作流 DSL（YAML/JSON），目标为 DSL 0.7.0（Dify 1.16.x 及以上，实测 1.17.1）。用于新建 Dify 工作流/对话流/Agent 应用、改造已有 DSL、排查导入失败、补 Human Input / Loop / Iteration / Agent v2 节点结构。当用户提到 Dify、工作流 DSL、chatflow、导入报错、workflow.yml 时使用。
 license: MIT
 compatibility: Requires Python 3.9+ and PyYAML.
 ---
@@ -11,22 +11,23 @@ compatibility: Requires Python 3.9+ and PyYAML.
 
 ## 先决条件：确认版本
 
+目标实例是 Dify **1.17.1**，DSL 版本固定 `"0.7.0"`（Dify 1.16.x / 1.17.x / 1.18.x 都是这个结构）。
+
 | 目标环境 | `version` | 能力 |
 |---|---|---|
-| Dify 1.16.x 及以上 | `"0.7.0"` | 全部 + Agent App、Agent v2、Human Input、节点 wrapper 布局字段 |
-| Dify 1.15.x | `"0.6.0"` | Workflow / Chatflow / Loop / assigner v2 / legacy Agent |
-| 未知 | `"0.7.0"` | 并在回复里明确"按 1.16.x 假设生成" |
+| Dify 1.16.x 及以上（含 1.17.1） | `"0.7.0"` | 全部 + Agent App、Agent v2、Human Input、节点 wrapper 布局字段 |
+| 更早的 Dify | `"0.6.0"` 及更早 | 结构不同，本技能不覆盖；见 `references/target-version.md` |
 
-**不要靠改版本字符串升级**。结构必须与版本匹配，详见 `references/version-deltas.md`。
+**不要靠改版本字符串升级**。结构必须与版本匹配，详见 `references/target-version.md`。
 编辑用户已有文件时，保留原版本，不要顺手升级。
 
 ## 生成流程
 
-1. **判断模式**：一次性/批量/接口型 → `workflow`；多轮对话 → `advanced-chat`；独立可对话的 Agent 应用 → `agent`（仅 0.7.0）。拿不准时问一句，不要猜。
+1. **判断模式**：一次性/批量/接口型 → `workflow`；多轮对话 → `advanced-chat`；独立可对话的 Agent 应用 → `agent`。拿不准时问一句，不要猜。
 2. **列节点清单**：按下方路由表把需求映射成节点序列，先写出 `start → … → end/answer` 的骨架，再填细节。
 3. **查节点字段**：每个节点读对应的 `references/nodes/*.md`，字段名逐字照抄，不要凭记忆写。
 4. **写 YAML**：节点 id 用 13 位数字串（与 Dify 真实导出一致，如 `1770000000010`；语义化 id 便于阅读，但交付前应换成数字），边按 `{source}-{handle}-{target}-target` 命名。
-5. **跑校验**：`python scripts/validate_dsl.py --strict --target-version <版本> <文件>`，把 ERROR 全部修掉；WARN 要么修，要么在回复里说明为什么可接受。
+5. **跑校验**：`python scripts/validate_dsl.py --strict --target-version 0.7.0 <文件>`，把 ERROR 全部修掉；WARN 要么修，要么在回复里说明为什么可接受。
    同一轮里**把本次改动过的字段单独打印一次解析后的值**（`yaml.safe_load` 之后 `repr()`），确认它不是你以为的样子——
    典型翻车是 `headers` 被 YAML 折叠成空格、数字型 id 被解析成 int，这两类校验器未必拦得住全部变体。
    改已有文件时优先**定点编辑**，不要整份覆写：整份重写会把所有已验证字段重新冒一次险。
@@ -72,6 +73,7 @@ compatibility: Requires Python 3.9+ and PyYAML.
 10. **多个 `end` 节点的输出变量名必须全局唯一**。工作流的输出是一张扁平表，两个 End 都用 `decision` 会在发布检查里被拒（`输出节点变量重复`）。分支之间用前缀区分，如 `ok_result` / `back_result`。
 11. **`http-request.authorization` 是必填字段**，无鉴权也要写 `{type: no-auth}`；缺了导入报 `authorization field required`。另外「鉴权 → API-Key」字段**不做变量替换**，把 `{{#env.TOKEN#}}` 写进去运行期会得到空值并报 `API key is required ... but was empty`——token 一律放 `headers`。
 12. **`headers` / `params` 必须是「每行一个 `key: value`」的字符串**。写成 YAML 双引号多行会被折叠成空格，两个 key 挤一行，YAML 合法但导入失败。要换行就写 `"a: 1\nb: 2"` 的转义形式。
+13. **运行期枚举字段只能取 Dify 真实枚举值**。`error_strategy` 只有 `fail-branch` / `default-value`——`terminated` / `continue-on-error` / `remove-abnormal-output` 属于 `error_handle_mode`（iteration / loop 用）；`start` 变量类型没有 `url` / `json`；`if-else` 的空值判断算子是 `null` / `not null`，不是 `is null`。这类错误导入期一律不拦，只在节点执行到那一步时抛 pydantic 报错。
 
 ## 模板
 
@@ -101,7 +103,7 @@ python scripts/validate_dsl.py --format json examples/*.yml
 
 依赖 Python 3.9+ 与 PyYAML；缺失时先安装 PyYAML。
 
-校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点与**字段级引用**（引用不存在的输出、未声明的 `env` / `conversation` 变量）、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖；以及一批「YAML 合法但 Dify 不认」的坑：**跨 End 输出变量重名**、**`http-request` 缺 `authorization`**、**`headers`/`params` 被折叠成一行**、**`code` 的 `main` 形参与 `variables` 不一致**、**文件带 BOM / CRLF**、**节点 id 非 13 位数字**。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
+校验器覆盖：版本与模式、节点字段、边端点与分支句柄、选择器根节点与**字段级引用**（引用不存在的输出、未声明的 `env` / `conversation` 变量）、模板引用合法性、容器结构、可达性与环、Agent 包引用、Human Input 结构、插件依赖、**运行期枚举值**（`error_strategy`、变量类型、比较算子）；以及一批「YAML 合法但 Dify 不认」的坑：**跨 End 输出变量重名**、**`http-request` 缺 `authorization`**、**`headers`/`params` 被折叠成一行**、**`code` 的 `main` 形参与 `variables` 不一致**、**文件带 BOM / CRLF**、**节点 id 非 13 位数字**。它**不**替代真实导入——最终以目标工作区导入弹窗与一次试跑为准。
 
 ## 交付清单
 
@@ -142,5 +144,5 @@ python scripts/deliver_checklist.py app.dify.yml --format json
 
 - `references/dsl-format.md` — 顶层结构、节点 wrapper、变量与选择器、dependencies
 - `references/edge-and-layout.md` — 边、分支句柄、坐标与容器布局
-- `references/version-deltas.md` — 0.6.0 ↔ 0.7.0 差异与迁移清单
+- `references/target-version.md` — 目标版本基线（DSL 0.7.0 / Dify 1.17.1）与导入兼容判定
 - `references/nodes/*.md` — 21 个节点的字段表与最小示例

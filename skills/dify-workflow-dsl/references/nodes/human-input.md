@@ -6,7 +6,7 @@
 
 `human-input` 是中断型节点：执行到这里工作流暂停并生成一条待办，收件人在 Web App（或已配置的投递渠道）填写 `inputs` 定义的表单、点击 `user_actions` 中的按钮。恢复执行后，按钮决定走哪条出边（动作 `id` 即 `sourceHandle`），每个 `output_variable_name` 成为一个节点输出，另外固定暴露 `__action_id`、`__action_value`、`__rendered_content` 三个元信息输出。
 
-该节点只在 DSL 0.7.0（Dify 1.16.x）中存在，0.6.0 工作区导入会报未知节点类型。
+该节点是 DSL 0.7.0 的结构，目标实例 1.17.1 直接支持；往更早的工作区导入会报未知节点类型。
 
 ## 何时用 / 何时不要用
 

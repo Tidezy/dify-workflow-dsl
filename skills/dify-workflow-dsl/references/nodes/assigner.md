@@ -48,7 +48,7 @@
 | 标识 | 无 `version` 字段 | `version: "2"`（字符串，写数字会退化成 v1 解析） |
 | 取值字段 | `value`（variable 时是选择器数组） | `value`（同样存选择器或字面量，**不再用 `value_selector`**） |
 | 容器标记 | 视导出而定 | loop 内固定 `isInLoop: true` + `loop_id` |
-| 典型来源 | Dify 1.15.x 及更早导出 | Dify 1.16.x 导出 |
+| 典型来源 | 旧版导出 | 当前导出 |
 
 v1 里 `items[]` 只有 `variable_selector` / `input_type` / `value` / `operation` / `write_mode` 五项；v2 结构相同但语义收敛到 `value` 一处。编辑既有文件时按导出原样保留，不要在两代之间混填。
 

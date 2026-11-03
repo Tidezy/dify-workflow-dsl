@@ -59,6 +59,7 @@ class InvalidFixtures(unittest.TestCase):
         "http-missing-authorization.yml": "http.authorization",
         "http-headers-folded.yml": "http.kv-folded",
         "code-signature-mismatch.yml": "code.signature",
+        "bad-enum-values.yml": "enum.error-strategy",
     }
 
     def test_invalid_fixtures_are_caught(self):
@@ -219,13 +220,94 @@ class FieldReferences(unittest.TestCase):
         self.assertEqual(set(), merged, msg=rep.items)
 
 
+class RuntimeEnums(unittest.TestCase):
+    """运行期枚举写错时导入期不报错，必须在静态阶段拦下。"""
+
+    def check(self, doc):
+        rep = validate_dsl.Report("<inline>")
+        validate_dsl.check_document(doc, rep, None)
+        return rep
+
+    def test_error_strategy_must_be_fail_branch_or_default_value(self):
+        nodes = [
+            make_node("n_start", "start", variables=[]),
+            make_node("n_tpl", "template-transform", template="x", variables=[], error_strategy="terminated"),
+            make_node("n_end", "end", outputs=[{"variable": "v", "value_selector": ["n_tpl", "output"], "value_type": "string"}]),
+        ]
+        edges = [make_edge("n_start", "n_tpl"), make_edge("n_tpl", "n_end")]
+        self.assertIn("enum.error-strategy", codes(self.check(make_doc(nodes, edges))))
+
+    def test_valid_error_strategy_passes(self):
+        nodes = [
+            make_node("n_start", "start", variables=[]),
+            make_node("n_tpl", "template-transform", template="x", variables=[], error_strategy="fail-branch"),
+            make_node("n_end", "end", outputs=[{"variable": "v", "value_selector": ["n_tpl", "output"], "value_type": "string"}]),
+        ]
+        edges = [make_edge("n_start", "n_tpl"), make_edge("n_tpl", "n_end")]
+        self.assertNotIn("enum.error-strategy", codes(self.check(make_doc(nodes, edges))))
+
+    def test_start_variable_type_is_validated(self):
+        nodes = [
+            make_node("n_start", "start", variables=[{"variable": "link", "type": "url", "required": True}]),
+            make_node("n_end", "end", outputs=[{"variable": "v", "value_selector": ["n_start", "link"], "value_type": "string"}]),
+        ]
+        edges = [make_edge("n_start", "n_end")]
+        self.assertIn("enum.start-variable-type", codes(self.check(make_doc(nodes, edges))))
+
+    def test_if_else_comparison_operator_is_validated(self):
+        nodes = [
+            make_node("n_start", "start", variables=[{"variable": "t", "type": "text-input", "required": True}]),
+            make_node("n_if", "if-else", cases=[{"id": "c1", "logical_operator": "and", "conditions": [
+                {"variable_selector": ["n_start", "t"], "comparison_operator": "is null", "value": ""},
+            ]}]),
+            make_node("n_end", "end", outputs=[{"variable": "v", "value_selector": ["n_start", "t"], "value_type": "string"}]),
+        ]
+        edges = [make_edge("n_start", "n_if"), make_edge("n_if", "n_end", handle="c1")]
+        self.assertIn("enum.comparison-operator", codes(self.check(make_doc(nodes, edges))))
+
+    def test_list_operator_rejects_if_else_only_operators(self):
+        nodes = [
+            make_node("n_start", "start", variables=[{"variable": "t", "type": "text-input", "required": True}]),
+            make_node("n_list", "list-operator", variable=["n_start", "t"], var_type="array[string]",
+                      filter_by={"enabled": True, "filter_by": {"comparison_operator": "exists", "value": ""}},
+                      order_by={"enabled": False}, limit={"enabled": False}),
+            make_node("n_end", "end", outputs=[{"variable": "v", "value_selector": ["n_list", "result"], "value_type": "array[string]"}]),
+        ]
+        edges = [make_edge("n_start", "n_list"), make_edge("n_list", "n_end")]
+        self.assertIn("enum.comparison-operator", codes(self.check(make_doc(nodes, edges))))
+
+
 class VersionPolicy(unittest.TestCase):
-    def test_target_version_mismatch(self):
-        path = os.path.join(TEST_ROOT, "fixtures", "valid", "minimal-workflow-0.7.yml")
-        rep = validate_dsl.validate_file(path, "0.6.0")
+    """目标版本只有 DSL 0.7.0；更早的版本既不该被生成，也不该被静默放过。"""
+
+    OLD_DOC = {
+        "version": "0.6.0",
+        "kind": "app",
+        "app": {"name": "旧版工作流", "mode": "workflow"},
+        "dependencies": [],
+        "workflow": {
+            "environment_variables": [],
+            "conversation_variables": [],
+            "graph": {"nodes": [], "edges": []},
+        },
+    }
+
+    def test_old_version_file_is_rejected_against_current_target(self):
+        rep = validate_dsl.Report("<inline>")
+        validate_dsl.check_document(self.OLD_DOC, rep, "0.7.0")
         self.assertIn("version.mismatch", codes(rep))
 
-    def test_agent_mode_rejected_before_070(self):
+    def test_old_version_file_is_flagged_without_target(self):
+        rep = validate_dsl.Report("<inline>")
+        validate_dsl.check_document(self.OLD_DOC, rep, None)
+        self.assertIn("version.unsupported", codes(rep))
+
+    def test_current_version_passes(self):
+        path = os.path.join(TEST_ROOT, "fixtures", "valid", "minimal-workflow-0.7.yml")
+        rep = validate_dsl.validate_file(path, "0.7.0")
+        self.assertEqual([], rep.errors, msg=rep.errors)
+
+    def test_agent_mode_requires_current_version(self):
         doc = {
             "version": "0.6.0",
             "kind": "app",

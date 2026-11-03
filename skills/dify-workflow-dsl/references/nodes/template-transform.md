@@ -32,7 +32,7 @@
 | `variables[].variable` | string | 是 | 模板中的变量名，即 `{{ name }}` 里的 `name` |
 | `variables[].value_selector` | string[] | 是 | 上游引用，如 `["<node_id>", "result"]` |
 | `variables[].value_type` | string | 否 | 类型提示；数组/对象建议标注，便于 UI 校验 |
-| `error_strategy` | string | 否 | `terminated` / `continue-on-error` / `remove-abnormal-output` |
+| `error_strategy` | string | 否 | `fail-branch` / `default-value`。这是 `ErrorStrategy` 枚举；`terminated` / `continue-on-error` / `remove-abnormal-output` 属于 `error_handle_mode`（iteration / loop 用），两者不通用 |
 | `selected` | boolean | 是 | 导出固定为 `false` |
 
 ### 模板语法要点

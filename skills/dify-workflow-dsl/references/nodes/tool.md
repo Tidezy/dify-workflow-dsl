@@ -28,7 +28,7 @@
 | `title` | string | 是 | 画布显示名 |
 | `provider_id` | string | 是 | 提供方标识，通常形如 `langgenius/<plugin>/<provider>` |
 | `provider_name` | string | 是 | 提供方名，导出里一般与 `provider_id` 相同 |
-| `provider_type` | string | 是 | `builtin` / `api` / `workflow` / `mcp` |
+| `provider_type` | string | 是 | `plugin` / `builtin` / `workflow` / `api` / `app` / `dataset-retrieval` / `mcp`；插件工具最常见的是 `plugin` |
 | `tool_name` | string | 是 | 提供方下的工具名，如 `scrape` |
 | `tool_label` | string | 是 | 工具的展示名 |
 | `tool_description` | string | 否 | 工具描述，导出里常见 |
@@ -39,7 +39,7 @@
 | `tool_node_version` | string | 否 | 节点版本，常见 `"2"` |
 | `plugin_id` | string | 否 | 插件标识，如 `langgenius/firecrawl` |
 | `plugin_unique_identifier` | string | 否 | 带版本与哈希的插件标识 |
-| `error_strategy` | string | 否 | `terminated` / `continue-on-error` / `remove-abnormal-output` |
+| `error_strategy` | string | 否 | `fail-branch` / `default-value`。这是 `ErrorStrategy` 枚举；`terminated` / `continue-on-error` / `remove-abnormal-output` 属于 `error_handle_mode`（iteration / loop 用），两者不通用 |
 | `selected` | boolean | 是 | 导出固定为 `false` |
 
 ### `provider_type` 取值

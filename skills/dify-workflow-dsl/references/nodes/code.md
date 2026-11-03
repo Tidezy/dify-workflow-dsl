@@ -36,7 +36,7 @@
 | `outputs` | object | 是 | **dict**，键为输出名，值为 `{type, children}` |
 | `outputs.<key>.type` | string | 是 | `string` / `number` / `boolean` / `object` / `array` / `array[string]` / `array[object]` / `array[file]` / `any` 等 |
 | `outputs.<key>.children` | object \| null | 否 | 嵌套结构描述，普通标量写 `null` |
-| `error_strategy` | string | 否 | `terminated` / `continue-on-error` / `remove-abnormal-output` |
+| `error_strategy` | string | 否 | `fail-branch` / `default-value`。这是 `ErrorStrategy` 枚举；`terminated` / `continue-on-error` / `remove-abnormal-output` 属于 `error_handle_mode`（iteration / loop 用），两者不通用 |
 | `retry_config.retry_enabled` | boolean | 否 | 失败重试开关（部分导出用 `enabled`，以目标工作区导出的 DSL 为准） |
 | `retry_config.max_retries` | number | 否 | 最大重试次数 |
 | `retry_config.retry_interval` | number | 否 | 重试间隔，毫秒 |
@@ -99,5 +99,5 @@
 - `def main(...)` 的形参名与 `variables[].variable` 对不上（顺序也要一致）。运行期按形参名取值，
   对不上不报错、直接拿到空值——校验器会报 `code.signature`。
 - 返回 dict 的键与 `outputs` 声明的键不一致，运行期取不到值。
-- `code_language` 仍写成 `json`（早期 0.6.0 文档的写法），应改为 `python3` 加 `json.loads`。
+- `code_language` 仍写成 `json`（旧文档的写法），应改为 `python3` 加 `json.loads`。
 - `variables[].value_selector` 为空数组，或指向了上游并不存在的输出键。

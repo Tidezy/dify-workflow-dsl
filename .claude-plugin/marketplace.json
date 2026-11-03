@@ -4,7 +4,7 @@
   "plugins": [
     {
       "name": "dify-workflow-dsl",
-      "description": "Generate import-ready Dify workflow DSL (DSL 0.6.0 / 0.7.0) with a static validator",
+      "description": "Generate import-ready Dify workflow DSL (DSL 0.7.0) with a static validator",
       "version": "1.0.0",
       "source": "./"
     }

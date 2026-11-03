@@ -1,11 +1,11 @@
 # Agent（`agent`）
 
-`agent` 在 DSL 里有三种互不兼容的形态：旧版插件策略 Agent 节点、0.7.0 的 Agent v2 节点、以及 0.7.0 的顶层 Agent App（`app.mode: agent`）。三者都叫 agent，字段却完全不同，不能混写。
+`agent` 在 DSL 里有三种互不兼容的形态：legacy 插件策略 Agent 节点、Agent v2 节点、以及顶层 Agent App（`app.mode: agent`）。三者都叫 agent，字段却完全不同，不能混写。
 
 ## 用途
 
-- **legacy 插件策略 Agent**：由 `langgenius/agent` 一类策略插件驱动的节点，把模型 + 指令 + 工具集交给插件自己跑 ReAct / FunctionCalling 循环，0.6.0 与 0.7.0 都存在。
-- **Agent v2 节点**：0.7.0 的工作流内 Agent 节点，节点只描述"这次要做什么"（`agent_job`），Agent 本体（提示词、模型、技能）抽到顶层 `agent_packages`，可跨工作区搬运。
+- **legacy 插件策略 Agent**：由 `langgenius/agent` 一类策略插件驱动的节点，把模型 + 指令 + 工具集交给插件自己跑 ReAct / FunctionCalling 循环，1.17.1 仍然支持这个形态。
+- **Agent v2 节点**：工作流内 Agent 节点，节点只描述"这次要做什么"（`agent_job`），Agent 本体（提示词、模型、技能）抽到顶层 `agent_packages`，可跨工作区搬运。
 - **顶层 Agent App**：`app.mode: agent` 的独立应用，没有 `workflow.graph`，整个应用等于一个 `agent_packages` 条目加一个 `package_ref`。
 
 ## 何时用 / 何时不要用
@@ -19,11 +19,11 @@
 
 - 步骤固定、只需一次模型调用 → 用 `llm.md`；要严格结构 → `llm` + `parameter-extractor`。
 - 只调一个确定的工具 → 用 `tool.md`；需要确定性重试 / 分支 → `if-else` + `loop`。
-- 目标工作区是 1.15.x（DSL 0.6.0）→ 只能写 legacy 形态，v2 与 Agent App 会导入失败。
+- 目标工作区不认 v2 结构 → 只能写 legacy 形态，v2 与 Agent App 会导入失败。
 
 ## 字段表
 
-### 一、legacy 插件策略 Agent（0.6.0 / 0.7.0）
+### 一、legacy 插件策略 Agent
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |

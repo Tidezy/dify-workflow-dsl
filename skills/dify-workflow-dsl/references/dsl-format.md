@@ -1,6 +1,6 @@
 # DSL 结构规范
 
-适用于 DSL `0.6.0`（Dify 1.15.x）与 `0.7.0`（Dify 1.16.x）。字段以**目标工作区导出的 DSL 为准**；本文给出的是可直接导入的最小完整骨架。
+适用于 DSL `0.7.0`（Dify 1.16.x 及以上，目标实例 1.17.1）。字段以**目标工作区导出的 DSL 为准**；本文给出的是可直接导入的最小完整骨架。
 
 ## 文件与命名
 
@@ -51,7 +51,7 @@ workflow:
       zoom: 0.7
 ```
 
-### Agent 模式（仅 0.7.0）
+### Agent 模式
 
 ```yaml
 version: "0.7.0"
@@ -81,7 +81,7 @@ Agent 模式**没有 `workflow` 段**。不要把它和"workflow 里放一个 Ag
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `name` | string | 是 | 应用名，导入后显示在应用列表 |
-| `mode` | enum | 是 | `workflow` / `advanced-chat` / `agent`（`agent` 仅 0.7.0） |
+| `mode` | enum | 是 | `workflow` / `advanced-chat` / `agent` |
 | `description` | string | 否 | 应用说明 |
 | `icon` | string | 否 | emoji 字符或图片 URL |
 | `icon_type` | enum | 否 | `emoji` / `image` |
@@ -233,7 +233,7 @@ model:
 
 ## 三种模式的最小结构差异
 
-| 项 | `workflow` | `advanced-chat` | `agent`（0.7.0） |
+| 项 | `workflow` | `advanced-chat` | `agent` |
 |---|---|---|---|
 | 入口 | `start` 或触发器 | `start`（必须） | 无图 |
 | 出口 | 至少一个可达 `end` | 至少一个可达 `answer` | 无图 |
@@ -265,5 +265,5 @@ model:
 ## 相关
 
 - `edge-and-layout.md` — 边、分支 handle、坐标布局
-- `version-deltas.md` — 0.6.0 与 0.7.0 的差异与迁移清单
+- `target-version.md` — 目标版本基线（DSL 0.7.0 / Dify 1.17.1）与导入兼容判定
 - `nodes/*.md` — 各节点字段表与最小示例

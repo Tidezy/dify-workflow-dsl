@@ -36,10 +36,10 @@
 | `variables[].max_length` | number | 否 | 文本类输入最大长度。 |
 | `variables[].default` | string / number | 否 | 默认值。 |
 | `variables[].options` | string[] | 否 | `type: select` 的候选项。 |
-| `variables[].placeholder` | string | 否 | 输入框占位提示。 |
-| `variables[].hint` | string | 否 | 字段下方帮助文本。 |
-| `variables[].unit` | string | 否 | `type: number` 的单位后缀。 |
-| `variables[].json_schema` | string / object | 否 | `json` / `json_object` 的结构约束。 |
+| `variables[].placeholder` | string | 否 | 输入框占位提示。运行时模型里没有这个字段，只会被忽略。 |
+| `variables[].hint` | string | 否 | 字段下方帮助文本。运行时模型里没有这个字段，只会被忽略。 |
+| `variables[].unit` | string | 否 | `type: number` 的单位后缀。运行时模型里没有这个字段，只会被忽略。 |
+| `variables[].json_schema` | object | 否 | `type: json_object` 的结构约束，运行时按对象校验。 |
 | `variables[].hide` | boolean | 否 | 是否在表单中隐藏。 |
 | `variables[].allowed_file_types` | string[] | 否 | 文件类：`image` / `document` / `audio` / `video` / `custom`。 |
 | `variables[].allowed_file_extensions` | string[] | 否 | 文件类：如 `[.pdf, .docx]`；`custom` 必须给。 |
@@ -54,13 +54,13 @@
 | `paragraph` | 多行文本。 |
 | `select` | 下拉选择，需配 `options`。 |
 | `number` | 数字。 |
-| `url` | URL，带格式校验。 |
 | `file` | 单个文件。 |
 | `file-list` | 文件列表（`array[file]`）。 |
-| `json` | JSON 文本。 |
 | `checkbox` | 布尔勾选。 |
+| `external_data_tool` | 外部数据工具。 |
+| `json_object` | JSON 对象文本，需配 `json_schema`。 |
 
-旧导出中还会出现 `files`、`json_object` 等历史值；新建 DSL 优先用上表值，遇到旧文件保持原样。
+取值对应运行时 `VariableEntityType` 枚举，写错会在运行期被 pydantic 拒绝。没有 `url` 和 `json` 这两个取值；旧导出里的 `files` 等历史值同样不在枚举内，遇到旧文件保持原样。
 
 ## 最小可导入示例
 

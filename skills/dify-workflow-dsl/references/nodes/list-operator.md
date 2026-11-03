@@ -32,7 +32,7 @@
 | `variable` | string[] | 是 | 输入数组选择器，如 `["sys", "files"]`。 |
 | `var_type` | string | 是 | 输入数组类型，见下表。 |
 | `filter_by.enabled` | boolean | 是 | 是否启用过滤，三项操作通常只开一个。 |
-| `filter_by.filter_by.comparison_operator` | string | 启用时 | 与 `if-else` 同一套算子（`contains` / `is` / `>` / `empty` …）。 |
+| `filter_by.filter_by.comparison_operator` | string | 启用时 | 过滤算子，取值比 `if-else` 少一档：`contains` / `not contains` / `start with` / `end with` / `is` / `is not` / `empty` / `not empty` / `in` / `not in` / `=` / `≠` / `>` / `<` / `≥` / `≤`。**没有** `null` / `not null` / `exists` / `not exists` / `all of`，那是 `if-else` 专有的 |
 | `filter_by.filter_by.value` | string / number / boolean | 视算子 | 过滤比较值。 |
 | `filter_by.filter_by.varType` | string | 否 | 被比较字段类型。 |
 | `filter_by.filter_by.key` | string | 否 | `array[object]` 时比较的字段名。 |

@@ -1,0 +1,67 @@
+version: "0.7.0"
+kind: app
+app:
+  name: "错误：运行期枚举值非法"
+  mode: workflow
+  icon: "❌"
+  icon_type: emoji
+  icon_background: "#FEE2E2"
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  environment_variables: []
+  conversation_variables: []
+  features: {}
+  graph:
+    nodes:
+      - id: n_start
+        type: custom
+        data:
+          type: start
+          title: "开始"
+          variables:
+            - label: "链接"
+              variable: link
+              type: url
+              required: true
+        position: {x: 80, y: 282}
+      - id: n_tpl
+        type: custom
+        data:
+          type: template-transform
+          title: "模板"
+          variables:
+            - variable: link
+              value_selector: ["n_start", "link"]
+              value_type: string
+          template: "{{ link }}"
+          error_strategy: terminated
+        position: {x: 380, y: 282}
+      - id: n_end
+        type: custom
+        data:
+          type: end
+          title: "结束"
+          outputs:
+            - variable: v
+              value_selector: ["n_tpl", "output"]
+              value_type: string
+        position: {x: 680, y: 282}
+    edges:
+      - id: n_start-source-n_tpl-target
+        source: n_start
+        sourceHandle: source
+        target: n_tpl
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: start, targetType: template-transform}
+      - id: n_tpl-source-n_end-target
+        source: n_tpl
+        sourceHandle: source
+        target: n_end
+        targetHandle: target
+        type: custom
+        zIndex: 0
+        data: {sourceType: template-transform, targetType: end}
+    viewport: {x: 0, y: 0, zoom: 0.7}

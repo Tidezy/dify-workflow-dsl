@@ -53,7 +53,7 @@
 | `empty` / `not empty` | string、number、array | 否 |
 | `=` / `≠` | number、integer | 是 |
 | `>` / `<` / `≥` / `≤` | number、integer | 是 |
-| `is null` / `is not null` | 任意 | 否 |
+| `null` / `not null` | 任意 | 否 |
 | `exists` / `not exists` | file | 否 |
 | `in` / `not in` | 文件属性 | 是 |
 | `all of` | `array[file]` | 是 |

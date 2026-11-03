@@ -1,10 +1,10 @@
 # dify-workflow-dsl 技能开发说明
 
-从自然语言需求生成**可直接导入**的 Dify 工作流 DSL（YAML / JSON），覆盖 DSL `0.6.0`（Dify 1.15.x）与 `0.7.0`（Dify 1.16.x）。
+从自然语言需求生成**可直接导入**的 Dify 工作流 DSL（YAML / JSON），目标为 DSL `0.7.0`（Dify 1.16.x 及以上，实测 1.17.1）。
 
 这不是"写个大概像的 YAML"的提示词集合。它把三类最容易翻车的东西固化成可校验的规范：
 
-1. **版本结构**——0.7.0 的 Agent App、Agent v2、Human Input 与 0.6.0 不是只差一个版本号；
+1. **版本结构**——Agent App、Agent v2、Human Input 是 0.7.0 才有的结构，改版本号不会让文件长出它们；
 2. **连线语义**——分支句柄（`cases[].id` / `classes[].id` / `user_actions[].id` / `__timeout`）逐字匹配；
 3. **引用合法**——选择器根节点存在、模板里 `{{#node.field#}}` 的节点 id 不含连字符。
 
@@ -18,7 +18,7 @@ skills/dify-workflow-dsl/   技能包（安装时整个目录复制）
   references/
     dsl-format.md           顶层结构、节点 wrapper、变量与选择器、dependencies
     edge-and-layout.md      边、分支句柄、坐标与容器布局
-    version-deltas.md       0.6.0 ↔ 0.7.0 差异与迁移清单
+    target-version.md        目标版本基线（DSL 0.7.0 / Dify 1.17.1）与导入兼容判定
     nodes/*.md              21 个节点的字段表、最小示例、导入失败原因
     templates/*.yml         4 个可直接改的骨架
   examples/*.dify.yml       5 个完整可导入样例
@@ -51,7 +51,7 @@ python -m unittest discover -s tests -v
 
 | 类别 | 检查内容 |
 |---|---|
-| 版本 | `version` 为字符串、在支持列表内、与 `--target-version` 一致；`mode: agent` 仅 0.7.0 |
+| 版本 | `version` 为字符串、等于目标版本 `0.7.0`；`mode: agent` 仅 0.7.0 |
 | 图 | 入口唯一性、`end`/`answer` 可达、孤岛节点、意外回边、死端 |
 | 节点 | 类型枚举、字段必填项（llm / code / end / if-else / classifier / human-input / assigner / tool / iteration / loop / agent） |
 | 边 | 端点存在、`targetHandle`、分支句柄与分支定义一致、`sourceType`/`targetType` 对齐 |
@@ -59,6 +59,7 @@ python -m unittest discover -s tests -v
 | 字段 | 引用的输出字段是否真实存在（`["node","field"]` 与 `{{#node.field#}}` 都查）；`env` / `conversation` 变量是否已声明 |
 | 容器 | `parentId`、`zIndex`、`isInIteration`/`isInLoop`、`start_node_id` 指向辅助起点 |
 | Agent | `agent_packages` 引用完整、`version: "2"`、`declared_outputs` 结构 |
+| 枚举 | 运行期枚举值是否合法（`error_strategy`、变量类型、比较算子）——这类错导入期不拦，只在节点执行到那一步时抛 pydantic 报错 |
 | 依赖 | 插件节点是否缺 `dependencies`、`plugin_unique_identifier` 形态 |
 
 字段级检查的边界，是想清楚「宁可漏、不可误报」：
@@ -81,6 +82,19 @@ WARN 与 ERROR 分开：`--strict` 把 WARN 也计为失败。少数 WARN 是有
 
 `skills/dify-workflow-dsl/` 是自包含的运行时技能包（顶层有 `SKILL.md`），把整个目录复制到目标工具的技能目录即可，或使用仓库根目录的 `install.sh` / `install.ps1`。`tests/` 与本文档在技能包之外，不会被安装。
 
+`install.sh` 默认**扫描本机所有已安装工具的 skills 目录并逐个安装**，不用先挑工具：
+
+```bash
+./install.sh                  # 扫描并安装到所有命中的位置
+./install.sh --list           # 只看扫描结果
+./install.sh --project        # 额外装到当前项目下的工具级目录
+./install.sh --agents         # 只装 ~/.agents/skills（其余单点开关同理）
+```
+
+扫描按三档判定：`[装]` skills 目录已存在（覆盖更新）、`[新]` 工具目录在用但还没有 skills 子目录（新建）、`[跳]` 工具目录都不在（跳过，不凭空创建）。候选位置见 `README.md`。
+
+也可以手动复制：
+
 ```bash
 cp -R skills/dify-workflow-dsl <目标工具的技能目录>/
 ```
@@ -94,7 +108,7 @@ cp -R skills/dify-workflow-dsl <目标工具的技能目录>/
 - 只做静态校验，**不替代真实导入**。插件凭据、知识库 ID、触发器 URL 必须在目标工作区补齐。
 - 插件的动态字段（`tool_parameters`、`event_parameters`）以目标工作区导出为准，本技能只能给出结构约束。
 - 0.7.0 的 Agent 包内部资产（技能、上传文件、工作区联系人）导出时被清洗，`omitted_assets` 非空需人工补回。
-- DSL 版本演进快，`version-deltas.md` 需随 Dify 版本更新；不确定时以目标实例导出的文件为准。
+- DSL 版本演进快，`target-version.md` 需随 Dify 版本更新；不确定时以目标实例导出的文件为准。
 
 ## 许可
 

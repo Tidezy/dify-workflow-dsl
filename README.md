@@ -1,6 +1,6 @@
 # dify-workflow-dsl
 
-Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JSON**，覆盖 DSL `0.6.0`（Dify 1.15.x）与 `0.7.0`（Dify 1.16.x）。
+Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JSON**，目标为 DSL `0.7.0`（Dify 1.16.x 及以上，实测 1.17.1）。
 
 仓库采用通行布局：`skills/<技能名>/SKILL.md`，根目录带 `.claude-plugin/` 清单与安装脚本，可直接被 WorkBuddy、Claude Code、OpenClaw 等工具识别。
 
@@ -16,19 +16,42 @@ Dify 工作流 DSL 的技能仓库。产物是**可直接导入 Dify 的 YAML/JS
 
 ### 脚本安装（推荐）
 
+默认行为是**扫描本机所有已安装工具的 skills 目录并逐个安装**，不用先挑工具：
+
 ```bash
-./install.sh                  # 默认 ~/.workbuddy/skills
-./install.sh --workbuddy      # WorkBuddy，用户级、全工程可用
+./install.sh                  # 扫描并安装到所有命中的位置
+./install.sh --list           # 只看扫描结果，不安装
+./install.sh --project        # 额外装到当前项目下的工具级目录
+./install.sh --dry-run        # 只打印将执行的操作
+```
+
+只想装到某一个工具时用显式开关：
+
+```bash
 ./install.sh --agents         # ~/.agents/skills
 ./install.sh --claude         # ~/.claude/skills
 ./install.sh --codebuddy      # ~/.codebuddy/skills
+./install.sh --workbuddy      # ~/.workbuddy/skills
+./install.sh --qoder          # ~/.qoder/skills
 ./install.sh --dest <目录>     # 自定义，例如 <项目>/.workbuddy/skills 只对本工程生效
-./install.sh --only dify-workflow-dsl --dry-run
+./install.sh --only dify-workflow-dsl
 ```
 
-Windows 用 `.\install.ps1`，参数同名（`-Workbuddy` / `-Agents` / `-Claude` / `-Dest` / `-Only` / `-DryRun` / `-Backup`）。
+Windows 用 `.\install.ps1`，参数同名（`-List` / `-Project` / `-Agents` / `-Claude` / `-Codebuddy` / `-Workbuddy` / `-Qoder` / `-Dest` / `-Only` / `-DryRun` / `-Backup`）。
 
 覆盖同名技能前加 `--backup`（`-Backup`）会先备份为 `<name>.bak.<时间戳>`。
+
+#### 扫描规则
+
+内置一批常见工具的 skills 目录，判定分三档：
+
+| 状态 | 含义 | 是否安装 |
+|---|---|---|
+| `[装]` | skills 目录已存在 | 是（覆盖更新） |
+| `[新]` | 工具目录在用，但还没有 skills 子目录 | 是（新建） |
+| `[跳]` | 工具目录都不在 | 否（不会凭空造目录） |
+
+用户级候选：`~/.workbuddy`、`~/.agents`、`~/.claude`、`~/.codebuddy`、`~/.qoder`、`~/.cursor`、`~/.gemini`、`~/.codex`；`--project` 再叠加当前工作区下的同名目录。
 
 ### Claude Code 插件市场
 
@@ -60,7 +83,7 @@ python -m unittest discover -s tests -v
 
 依赖 Python 3.9+、PyYAML。
 
-- 新增 Dify 节点或版本时，同步更新三处：`references/nodes/<node>.md`、`SKILL.md` 的节点路由表、`references/version-deltas.md`。
+- 新增 Dify 节点或版本时，同步更新三处：`references/nodes/<node>.md`、`SKILL.md` 的节点路由表、`references/target-version.md`。
 - 说明文字用中文，字段名与 YAML 关键字保持英文原样。
 
 ## 许可

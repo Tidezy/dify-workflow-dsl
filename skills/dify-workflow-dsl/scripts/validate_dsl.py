@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Dify DSL 静态校验器（支持 DSL 0.6.0 / 0.7.0）。
+"""Dify DSL 静态校验器（DSL 0.7.0，目标 Dify 1.16.x 及以上，实测 1.17.1）。
 
 只做静态检查，不替代真实工作区导入与运行测试。检查项：
 版本与模式、节点字段、边与分支句柄、选择器与模板引用（含字段级引用）、容器结构、
@@ -28,7 +28,7 @@ except ImportError:  # pragma: no cover
     sys.stderr.write("需要 PyYAML：pip install pyyaml\n")
     raise SystemExit(2)
 
-SUPPORTED_VERSIONS = {"0.6.0", "0.7.0"}
+SUPPORTED_VERSIONS = {"0.7.0"}
 APP_MODES = {"workflow", "advanced-chat", "agent"}
 GRAPH_MODES = {"workflow", "advanced-chat"}
 
@@ -55,7 +55,26 @@ CONTAINER_TYPES = {"iteration", "loop"}
 WRAPPER_TYPES = {"custom", "custom-iteration-start", "custom-loop-start", "custom-note"}
 TERMINAL_TYPES = {"end", "answer"}
 
-PROVIDER_TYPES = {"builtin", "api", "workflow", "mcp"}
+PROVIDER_TYPES = {"plugin", "builtin", "workflow", "api", "app", "dataset-retrieval", "mcp"}
+# 运行期枚举字段：写错时导入期不报错，只在节点执行到那一步时抛 pydantic
+# ValidationError，排查成本很高，所以在静态阶段就拦下来。
+# 取值来自 Dify 1.17.1（graphon v0.7.0）的实体定义。
+ERROR_STRATEGIES = {"fail-branch", "default-value"}
+START_VARIABLE_TYPES = {
+    "text-input", "select", "paragraph", "number",
+    "external_data_tool", "file", "file-list", "checkbox", "json_object",
+}
+IF_ELSE_COMPARISON_OPERATORS = {
+    "contains", "not contains", "start with", "end with", "is", "is not",
+    "empty", "not empty", "in", "not in", "all of",
+    "=", "≠", ">", "<", "≥", "≤", "null", "not null",
+    "exists", "not exists",
+}
+LIST_OPERATOR_COMPARISON_OPERATORS = {
+    "contains", "not contains", "start with", "end with", "is", "is not",
+    "empty", "not empty", "in", "not in",
+    "=", "≠", ">", "<", "≥", "≤",
+}
 SELECTOR_KEYS = {
     "value_selector", "variable_selector", "query_variable_selector",
     "iterator_selector", "output_selector", "query_attachment_selector",
@@ -164,10 +183,10 @@ def check_document(doc: Any, rep: Report, target_version: Optional[str]) -> None
     else:
         if not isinstance(version, str):
             rep.error("version.not-string", f"version 必须是字符串，当前是 {type(version).__name__}（写成 {version!r} 会被当成数字）")
-        elif version not in SUPPORTED_VERSIONS:
-            rep.warn("version.unsupported", f"version={version} 不在本校验器覆盖范围（{sorted(SUPPORTED_VERSIONS)}），仅做通用结构检查")
         elif target_version and version != target_version:
             rep.error("version.mismatch", f"version={version} 与 --target-version={target_version} 不一致")
+        elif version not in SUPPORTED_VERSIONS:
+            rep.warn("version.unsupported", f"version={version} 不在本校验器覆盖范围（{sorted(SUPPORTED_VERSIONS)}），仅做通用结构检查")
 
     if doc.get("kind") != "app":
         rep.error("kind.invalid", f"kind 必须为 app，当前为 {doc.get('kind')!r}")
@@ -348,6 +367,8 @@ def check_nodes(
             if node.get("zIndex") != 1002:
                 rep.warn("node.container-zindex", f"{label} 容器子节点 zIndex 应为 1002，当前 {node.get('zIndex')}")
 
+        check_enums(data, str(dtype or ""), label, rep)
+
         if dtype == "llm":
             check_llm(data, label, rep, mode)
         elif dtype == "code":
@@ -426,6 +447,59 @@ def check_llm(data: Dict[str, Any], label: str, rep: Report, mode: str) -> None:
                 rep.warn("llm.prompt-id", f"{label}.prompt_template[{i}] 缺少 id（新版导出通常带 uuid）")
     if not isinstance(data.get("context"), dict):
         rep.error("llm.context", f"{label} 缺少 context；即使关闭也必须写 {{enabled: false, variable_selector: []}}")
+
+
+def check_enums(data: Dict[str, Any], dtype: str, label: str, rep: Report) -> None:
+    """校验运行期枚举字段。
+
+    这些字段写错时导入期不会拦下，只在节点执行到那一步时抛 pydantic
+    ValidationError，所以静态阶段就要挡住。
+    """
+    strategy = data.get("error_strategy")
+    if strategy is not None and strategy not in ERROR_STRATEGIES:
+        rep.error(
+            "enum.error-strategy",
+            f"{label}.error_strategy={strategy!r} 不合法，应为 {sorted(ERROR_STRATEGIES)}"
+            "（terminated / continue-on-error / remove-abnormal-output 是 error_handle_mode 的取值）",
+        )
+
+    if dtype == "start":
+        for i, var in enumerate(_as_list(data.get("variables"))):
+            if not isinstance(var, dict):
+                continue
+            vtype = var.get("type")
+            if vtype is not None and vtype not in START_VARIABLE_TYPES:
+                rep.error(
+                    "enum.start-variable-type",
+                    f"{label}.variables[{i}].type={vtype!r} 不合法，应为 {sorted(START_VARIABLE_TYPES)}",
+                )
+
+    if dtype == "if-else":
+        for ci, case in enumerate(_as_list(data.get("cases"))):
+            if not isinstance(case, dict):
+                continue
+            for ki, cond in enumerate(_as_list(case.get("conditions"))):
+                if not isinstance(cond, dict):
+                    continue
+                op = cond.get("comparison_operator")
+                if op is not None and op not in IF_ELSE_COMPARISON_OPERATORS:
+                    rep.error(
+                        "enum.comparison-operator",
+                        f"{label}.cases[{ci}].conditions[{ki}].comparison_operator={op!r} 不合法，"
+                        f"应为 {sorted(IF_ELSE_COMPARISON_OPERATORS)}",
+                    )
+
+    if dtype == "list-operator":
+        outer = data.get("filter_by")
+        inner = outer.get("filter_by") if isinstance(outer, dict) else None
+        if isinstance(inner, dict):
+            op = inner.get("comparison_operator")
+            if op is not None and op not in LIST_OPERATOR_COMPARISON_OPERATORS:
+                rep.error(
+                    "enum.comparison-operator",
+                    f"{label}.filter_by.filter_by.comparison_operator={op!r} 不合法，"
+                    f"应为 {sorted(LIST_OPERATOR_COMPARISON_OPERATORS)}",
+                )
 
 
 def check_code(data: Dict[str, Any], label: str, rep: Report) -> None:
@@ -1202,7 +1276,7 @@ def validate_file(path: str, target_version: Optional[str]) -> Report:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="校验 Dify App DSL（支持 0.6.0 / 0.7.0）")
+    parser = argparse.ArgumentParser(description="校验 Dify App DSL（DSL 0.7.0）")
     parser.add_argument("files", nargs="+", help="待校验的 .yml / .json 文件")
     parser.add_argument("--target-version", choices=sorted(SUPPORTED_VERSIONS), help="要求文件声明的 version 与之匹配")
     parser.add_argument("--strict", action="store_true", help="WARN 也作为失败")
